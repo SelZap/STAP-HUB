@@ -1,7 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TrafficDataController;
 
+// for traffic data archive
+Route::get('/traffic/archive', [TrafficDataController:: class, 'index'])->name('traffic.archive');
+Route::get('/traffic/archive/export-csv', [TrafficDataController:: class, 'exportCSV'])->name('traffic.export-csv');
+Route::get('/traffic/archive/export-pdf', [TrafficDataController::class, 'exportPDF'])->name('traffic.export-pdf');
+
+// for landing page
 Route::get('/', function () {
     return view('landing');
 });

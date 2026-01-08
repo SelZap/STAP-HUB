@@ -15,7 +15,7 @@
         <ul class="nav-links">
             <li><a href="#" class="active">Home</a></li>
             <li><a href="#traffic-footage">Traffic Footage</a></li>
-            <li><a href="#data-archive">Traffic Data Archive</a></li>
+            <li><a href="/traffic/archive">Traffic Data Archive</a></li>
             <li><a href="#vehicle-count">Vehicle Count</a></li>
             <li><a href="#feedbacks">Feedbacks</a></li>
         </ul>
