@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STAP Hub - Smart Traffic Automation Program</title>
-    <link rel="icon" type="image/x-icon" href="{{ asset('STAP.ico') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/STAP.ico') }}">
     <link rel="stylesheet" href="{{ asset('css/landing.css') }}">
 </head>
 <body>
