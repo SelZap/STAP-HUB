@@ -12,13 +12,13 @@
     <nav>
         <img src="{{ asset('images/stap-logo.png') }}" alt="STAP Logo" class="logo">
         
-        <ul class="nav-links">
-            <li><a href="#" class="active">Home</a></li>
-            <li><a href="#traffic-footage">Traffic Footage</a></li>
-            <li><a href="#data-archive">Traffic Data Archive</a></li>
-            <li><a href="#vehicle-count">Vehicle Count</a></li>
-            <li><a href="#feedbacks">Feedbacks</a></li>
-        </ul>
+    <ul class="nav-links">
+        <li><a href="{{ url('/') }}" class="active">Home</a></li>
+        <li><a href="{{ route('traffic.footage') }}">Traffic Footage</a></li>
+        <li><a href="{{ route('traffic.archive') }}">Traffic Data Archive</a></li>
+        <li><a href="{{ route('vehicle.count') }}">Vehicle Count</a></li>
+        <li><a href="{{ route('feedbacks') }}">Feedbacks</a></li>
+    </ul>
     </nav>
 
     <!-- Hero Section -->
