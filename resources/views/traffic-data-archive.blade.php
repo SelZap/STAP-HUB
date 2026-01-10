@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Traffic Data Archive - STAP Hub</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('images/STAP.ico') }}">
-    @vite(['resources/css/app.css', 'resources/js/traffic-archive.js'])
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-slate-100">
     <!-- Navigation -->
@@ -31,7 +31,7 @@
         <div class="max-w-7xl mx-auto">
             <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
                 <!-- Header -->
-                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
+                <div class="bg-gradient-to-r from-[#003366] to-[#1a4d7a] px-8 py-6">
                     <h1 class="text-3xl font-bold text-white">Traffic Data Archive</h1>
                     <p class="text-blue-100 mt-1">View and download historical traffic data records</p>
                 </div>
@@ -47,7 +47,7 @@
                                 type="text"
                                 id="searchInput"
                                 placeholder="Search by ID, date, or time..."
-                                class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all"
                             />
                         </div>
                         

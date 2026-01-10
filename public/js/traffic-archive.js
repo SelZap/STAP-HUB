@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button onclick="goToPage(${i})" 
                             class="px-4 py-2 border rounded-lg transition-all ${
                                 current_page === i
-                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    ? 'bg-[#003366] text-white border-[#003366]'
                                     : 'border-gray-300 hover:bg-gray-50'
                             }">
                         ${i}
