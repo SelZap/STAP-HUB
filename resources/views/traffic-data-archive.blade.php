@@ -7,22 +7,19 @@
     <title>Traffic Data Archive - STAP Hub</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('images/STAP.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ asset('css/traffic-data-archive.css') }}">
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-slate-100">
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-8 py-4">
-            <div class="flex items-center justify-between">
-                <img src="{{ asset('images/stap-logo.png') }}" alt="STAP Logo" class="h-16">
-                
-                <ul class="flex gap-8 text-gray-700">
-                    <li><a href="{{ url('/') }}" class="hover:text-red-600 transition">Home</a></li>
-                    <li><a href="{{ route('traffic.footage') }}" class="hover:text-red-600 transition">Traffic Footage</a></li>
-                    <li><a href="{{ route('traffic.archive') }}" class="text-red-600 font-semibold">Traffic Data Archive</a></li>
-                    <li><a href="{{ route('vehicle.count') }}" class="hover:text-red-600 transition">Vehicle Count</a></li>
-                </ul>
-            </div>
-        </div>
+    <nav>
+        <img src="{{ asset('images/stap-logo.png') }}" alt="STAP Logo" class="logo">
+        
+        <ul class="nav-links">
+            <li><a href="{{ url('/') }}">Home</a></li>
+            <li><a href="{{ route('traffic.footage') }}">Traffic Footage</a></li>
+            <li><a href="{{ route('traffic.archive') }}" class="active">Traffic Data Archive</a></li>
+            <li><a href="{{ route('vehicle.count') }}">Vehicle Count</a></li>
+        </ul>
     </nav>
 
     <!-- Main Content -->
