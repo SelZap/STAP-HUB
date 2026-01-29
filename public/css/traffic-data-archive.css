@@ -1,0 +1,41 @@
+/* ============================================
+   NAVBAR STYLES (Match landing page)
+   ============================================ */
+nav {
+    background: white;
+    padding: 1.5rem 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo {
+    height: 60px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2.5rem;
+    list-style: none;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #5a6c7d;
+    font-size: 1.05rem;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    color: #e63946;
+}
+
+.nav-links a.active {
+    font-weight: 600;
+}
