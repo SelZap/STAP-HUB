@@ -3,8 +3,8 @@
 // ============================================
 
 // Global variables
-let barChart, pieChart;
-let currentView = 'daily';
+let pieChart;
+let currentView = 'weekly';
 let selectedVehicleTypes = ['motorcycle', 'passenger_car', 'emergency_vehicle'];
 let currentData = [];
 
@@ -82,6 +82,7 @@ function generateHourlyData(date) {
         const emergencyRatio = dayData.emergency_vehicle / dayData.total;
         
         hourlyData.push({
+            date: date, // Add the date field
             time: `${hour.toString().padStart(2, '0')}:00`,
             total: hourTotal,
             motorcycle: Math.round(hourTotal * motorcycleRatio),
@@ -131,12 +132,12 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded. Checking Chart.js...');
     console.log('Chart available?', typeof Chart !== 'undefined');
     
-    // Set initial dates to Jan 25, 2026
+    // Set initial dates to Jan 25-30, 2026 to show all data
     const startDate = document.getElementById('startDate');
     const endDate = document.getElementById('endDate');
     
     startDate.value = '2026-01-25';
-    endDate.value = '2026-01-25';
+    endDate.value = '2026-01-30';
     
     // Wait a bit for Chart.js to fully load
     setTimeout(() => {
@@ -160,58 +161,7 @@ function initializeCharts() {
     }
     
     try {
-        // Bar Chart
-        const barCtx = document.getElementById('vehicleBarChart');
-        if (!barCtx) {
-            console.error('Bar chart canvas not found');
-            return;
-        }
-        
-        barChart = new Chart(barCtx.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Total Vehicles (Both Intersections)',
-                    data: [],
-                    backgroundColor: '#6366f1',
-                    borderRadius: 6,
-                    barThickness: 40
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                return 'Vehicles: ' + context.parsed.y;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { display: false }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0, 0, 0, 0.05)' }
-                    }
-                }
-            }
-        });
-        
-        console.log('Bar chart created successfully');
-        
-        // Pie Chart
+        // Pie Chart only
         const pieCtx = document.getElementById('vehiclePieChart');
         if (!pieCtx) {
             console.error('Pie chart canvas not found');
@@ -352,7 +302,7 @@ function updateData() {
     
     // Update all displays
     updateStatistics();
-    updateBarChart();
+    updateTable();
     updatePieChart();
 }
 
@@ -388,32 +338,60 @@ function animateValue(id, start, end, duration) {
     }, 16);
 }
 
-function updateBarChart() {
-    if (!barChart) {
-        console.error('Bar chart not initialized');
+function updateTable() {
+    const tableBody = document.getElementById('vehicleTableBody');
+    if (!tableBody) {
+        console.error('Table body not found');
         return;
     }
     
-    const labels = [];
-    const data = [];
+    tableBody.innerHTML = '';
     
+    // Group data by date
+    const dateGroups = {};
     currentData.forEach(entry => {
-        if (currentView === 'daily') {
-            labels.push(entry.time);
-        } else {
-            labels.push(new Date(entry.date).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric' 
-            }));
+        const dateKey = entry.date;
+        if (!dateGroups[dateKey]) {
+            dateGroups[dateKey] = {
+                date: dateKey,
+                motorcycle: 0,
+                passenger_car: 0,
+                emergency_vehicle: 0,
+                total: 0
+            };
         }
-        data.push(entry.total);
+        
+        dateGroups[dateKey].motorcycle += entry.motorcycle;
+        dateGroups[dateKey].passenger_car += entry.passenger_car;
+        dateGroups[dateKey].emergency_vehicle += entry.emergency_vehicle;
+        dateGroups[dateKey].total += entry.total;
     });
     
-    console.log('Updating bar chart with', data.length, 'data points');
+    // Convert to array and sort by date
+    const sortedData = Object.values(dateGroups).sort((a, b) => 
+        new Date(a.date) - new Date(b.date)
+    );
     
-    barChart.data.labels = labels;
-    barChart.data.datasets[0].data = data;
-    barChart.update();
+    // Populate table
+    sortedData.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${formatTableDate(row.date)}</td>
+            <td>${row.motorcycle.toLocaleString()}</td>
+            <td>${row.passenger_car.toLocaleString()}</td>
+            <td>${row.emergency_vehicle.toLocaleString()}</td>
+            <td>${row.total.toLocaleString()}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+    
+    console.log('Table updated with', sortedData.length, 'rows');
+}
+
+function formatTableDate(dateString) {
+    const date = new Date(dateString);
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
 }
 
 function updatePieChart() {

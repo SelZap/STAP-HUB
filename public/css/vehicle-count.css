@@ -231,7 +231,7 @@ nav {
    ============================================ */
 .charts-section {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -333,6 +333,58 @@ nav {
 
 .pie-wrapper {
     height: 350px;
+}
+
+/* ============================================
+   TABLE STYLES
+   ============================================ */
+.table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.vehicle-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.vehicle-table thead {
+    background: linear-gradient(to right, #f9fafb, #f3f4f6);
+}
+
+.vehicle-table th {
+    text-align: left;
+    padding: 1rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.vehicle-table tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s;
+}
+
+.vehicle-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.vehicle-table td {
+    padding: 1rem 1.5rem;
+    font-size: 0.875rem;
+    color: #1f2937;
+}
+
+.vehicle-table td:first-child {
+    font-weight: 600;
+    color: #111827;
+}
+
+.vehicle-table td:last-child {
+    font-weight: 700;
+    color: #6366f1;
 }
 
 /* ============================================

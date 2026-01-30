@@ -22,7 +22,6 @@
 
     <!-- Main Container -->
     <main class="container">
-
         <!-- Controls Section -->
         <section class="controls-section">
             <div class="date-controls">
@@ -46,8 +45,8 @@
             </div>
 
             <div class="view-controls">
-                <button class="view-btn active" data-view="daily">Daily</button>
-                <button class="view-btn" data-view="weekly">Weekly</button>
+                <button class="view-btn" data-view="daily">Daily</button>
+                <button class="view-btn active" data-view="weekly">Weekly</button>
                 <button class="view-btn" data-view="monthly">Monthly</button>
             </div>
         </section>
@@ -87,10 +86,10 @@
 
         <!-- Charts Section -->
         <section class="charts-section">
-            <!-- Bar Chart -->
-            <div class="chart-container bar-chart-container">
+            <!-- Vehicle Count Table -->
+            <div class="chart-container table-container">
                 <div class="chart-header">
-                    <h2>Vehicle Counting Timeline</h2>
+                    <h2>Vehicle Count Records</h2>
                     <button class="download-btn" id="downloadData">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19 12V19H5V12H3V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V12H19ZM13 12.67L15.59 10.09L17 11.5L12 16.5L7 11.5L8.41 10.09L11 12.67V3H13V12.67Z"/>
@@ -98,14 +97,22 @@
                         Download Data
                     </button>
                 </div>
-                <div class="chart-legend">
-                    <div class="legend-item">
-                        <span class="legend-color total-color"></span>
-                        <span>Total Vehicles (Both Intersections)</span>
-                    </div>
-                </div>
-                <div class="chart-wrapper">
-                    <canvas id="vehicleBarChart"></canvas>
+                
+                <div class="table-wrapper">
+                    <table class="vehicle-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Motorcycle</th>
+                                <th>Passenger Car</th>
+                                <th>Emergency Vehicle</th>
+                                <th>Total Vehicles</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vehicleTableBody">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
