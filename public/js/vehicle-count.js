@@ -1,5 +1,5 @@
 // ============================================
-// VEHICLE COUNT PAGE - JAVASCRIPT
+// VEHICLE COUNT PAGE - JAVASCRIPT (FIXED)
 // ============================================
 
 // Global variables
@@ -9,70 +9,114 @@ let selectedVehicleTypes = ['motorcycle', 'passenger_car', 'emergency_vehicle'];
 let currentData = [];
 
 // ============================================
-// SAMPLE DATA GENERATION
+// HISTORICAL DATA (Jan 25-30, 2026)
+// ============================================
+const historicalData = {
+    '2026-01-25': {
+        total: 124,
+        motorcycle: 58,
+        passenger_car: 63,
+        emergency_vehicle: 3
+    },
+    '2026-01-26': {
+        total: 142,
+        motorcycle: 68,
+        passenger_car: 70,
+        emergency_vehicle: 4
+    },
+    '2026-01-27': {
+        total: 118,
+        motorcycle: 52,
+        passenger_car: 62,
+        emergency_vehicle: 4
+    },
+    '2026-01-28': {
+        total: 156,
+        motorcycle: 75,
+        passenger_car: 78,
+        emergency_vehicle: 3
+    },
+    '2026-01-29': {
+        total: 135,
+        motorcycle: 61,
+        passenger_car: 71,
+        emergency_vehicle: 3
+    },
+    '2026-01-30': {
+        total: 148,
+        motorcycle: 70,
+        passenger_car: 74,
+        emergency_vehicle: 4
+    }
+};
+
+// ============================================
+// DATA GENERATION FUNCTIONS
 // ============================================
 
-function generateSampleData(startDate, endDate, view) {
-    const data = [];
+function generateHourlyData(date) {
+    const dayData = historicalData[date];
+    if (!dayData) return [];
+    
+    const hourlyData = [];
+    const hours = 24;
+    
+    // Distribution pattern - peak hours at 7-9am and 5-7pm
+    const peakHours = [7, 8, 17, 18];
+    const normalHours = [6, 9, 10, 11, 12, 13, 14, 15, 16, 19, 20];
+    const lowHours = [0, 1, 2, 3, 4, 5, 21, 22, 23];
+    
+    for (let hour = 0; hour < hours; hour++) {
+        let multiplier;
+        if (peakHours.includes(hour)) {
+            multiplier = 0.08; // 8% of daily total during peak hours
+        } else if (normalHours.includes(hour)) {
+            multiplier = 0.045; // 4.5% during normal hours
+        } else {
+            multiplier = 0.01; // 1% during low hours
+        }
+        
+        const hourTotal = Math.round(dayData.total * multiplier);
+        const motorcycleRatio = dayData.motorcycle / dayData.total;
+        const passengerRatio = dayData.passenger_car / dayData.total;
+        const emergencyRatio = dayData.emergency_vehicle / dayData.total;
+        
+        hourlyData.push({
+            time: `${hour.toString().padStart(2, '0')}:00`,
+            total: hourTotal,
+            motorcycle: Math.round(hourTotal * motorcycleRatio),
+            passenger_car: Math.round(hourTotal * passengerRatio),
+            emergency_vehicle: Math.round(hourTotal * emergencyRatio)
+        });
+    }
+    
+    return hourlyData;
+}
+
+function generateDataForView(startDate, endDate, view) {
     const start = new Date(startDate);
     const end = new Date(endDate);
+    const data = [];
     
     if (view === 'daily') {
-        // Generate hourly data
-        for (let d = new Date(start); d <= end; d.setHours(d.getHours() + 1)) {
-            data.push({
-                date: d.toISOString().split('T')[0],
-                time: d.toTimeString().slice(0, 5),
-                mayor_gil_fernando: {
-                    motorcycle: Math.floor(Math.random() * 50) + 10,
-                    passenger_car: Math.floor(Math.random() * 150) + 50,
-                    emergency_vehicle: Math.floor(Math.random() * 5)
-                },
-                sumulong_highway: {
-                    motorcycle: Math.floor(Math.random() * 40) + 10,
-                    passenger_car: Math.floor(Math.random() * 120) + 40,
-                    emergency_vehicle: Math.floor(Math.random() * 3)
-                }
-            });
+        // For daily view, use the exact date
+        const dateStr = startDate;
+        if (historicalData[dateStr]) {
+            return generateHourlyData(dateStr);
         }
-    } else if (view === 'weekly') {
-        // Generate daily data for a week
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            data.push({
-                date: d.toISOString().split('T')[0],
-                time: '00:00',
-                mayor_gil_fernando: {
-                    motorcycle: Math.floor(Math.random() * 800) + 200,
-                    passenger_car: Math.floor(Math.random() * 2400) + 800,
-                    emergency_vehicle: Math.floor(Math.random() * 80) + 10
-                },
-                sumulong_highway: {
-                    motorcycle: Math.floor(Math.random() * 600) + 200,
-                    passenger_car: Math.floor(Math.random() * 2000) + 600,
-                    emergency_vehicle: Math.floor(Math.random() * 50) + 10
-                }
-            });
-        }
-    } else if (view === 'monthly') {
-        // Generate weekly data for a month
-        const weeks = Math.ceil((end - start) / (7 * 24 * 60 * 60 * 1000));
-        for (let i = 0; i < weeks; i++) {
-            const weekStart = new Date(start);
-            weekStart.setDate(weekStart.getDate() + (i * 7));
-            data.push({
-                date: weekStart.toISOString().split('T')[0],
-                time: '00:00',
-                mayor_gil_fernando: {
-                    motorcycle: Math.floor(Math.random() * 5000) + 1500,
-                    passenger_car: Math.floor(Math.random() * 15000) + 5000,
-                    emergency_vehicle: Math.floor(Math.random() * 500) + 50
-                },
-                sumulong_highway: {
-                    motorcycle: Math.floor(Math.random() * 4000) + 1000,
-                    passenger_car: Math.floor(Math.random() * 12000) + 4000,
-                    emergency_vehicle: Math.floor(Math.random() * 300) + 30
-                }
-            });
+    } else if (view === 'weekly' || view === 'monthly') {
+        // For weekly/monthly view, aggregate by day
+        let current = new Date(start);
+        while (current <= end) {
+            const dateStr = current.toISOString().split('T')[0];
+            if (historicalData[dateStr]) {
+                data.push({
+                    date: dateStr,
+                    time: '00:00',
+                    ...historicalData[dateStr]
+                });
+            }
+            current.setDate(current.getDate() + 1);
         }
     }
     
@@ -84,22 +128,23 @@ function generateSampleData(startDate, endDate, view) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Set initial dates
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    console.log('Page loaded. Checking Chart.js...');
+    console.log('Chart available?', typeof Chart !== 'undefined');
     
-    document.getElementById('startDate').valueAsDate = yesterday;
-    document.getElementById('endDate').valueAsDate = today;
+    // Set initial dates to Jan 25, 2026
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
     
-    // Generate initial data
-    updateData();
+    startDate.value = '2026-01-25';
+    endDate.value = '2026-01-25';
     
-    // Initialize charts
-    initializeCharts();
-    
-    // Set up event listeners
-    setupEventListeners();
+    // Wait a bit for Chart.js to fully load
+    setTimeout(() => {
+        console.log('Initializing charts after delay...');
+        initializeCharts();
+        updateData();
+        setupEventListeners();
+    }, 100);
 });
 
 // ============================================
@@ -107,106 +152,114 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 function initializeCharts() {
-    // Bar Chart
-    const barCtx = document.getElementById('vehicleBarChart').getContext('2d');
-    barChart = new Chart(barCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [
-                {
-                    label: 'Mayor Gil Fernando Ave',
-                    data: [],
-                    backgroundColor: '#a78bfa',
-                    borderRadius: 6
-                },
-                {
-                    label: 'Sumulong Highway',
+    console.log('Initializing charts...');
+    
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js not loaded!');
+        return;
+    }
+    
+    try {
+        // Bar Chart
+        const barCtx = document.getElementById('vehicleBarChart');
+        if (!barCtx) {
+            console.error('Bar chart canvas not found');
+            return;
+        }
+        
+        barChart = new Chart(barCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Total Vehicles (Both Intersections)',
                     data: [],
                     backgroundColor: '#6366f1',
-                    borderRadius: 6
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    titleFont: {
-                        size: 14
-                    },
-                    bodyFont: {
-                        size: 13
-                    }
-                }
+                    borderRadius: 6,
+                    barThickness: 40
+                }]
             },
-            scales: {
-                x: {
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                }
-            }
-        }
-    });
-    
-    // Pie Chart
-    const pieCtx = document.getElementById('vehiclePieChart').getContext('2d');
-    pieChart = new Chart(pieCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Motorcycle', 'Passenger Car', 'Emergency Vehicle'],
-            datasets: [{
-                data: [],
-                backgroundColor: [
-                    '#10b981',
-                    '#6366f1',
-                    '#f59e0b'
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        font: {
-                            size: 13
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Vehicles: ' + context.parsed.y;
+                            }
                         }
                     }
                 },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: ${value} (${percentage}%)`;
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                    }
+                }
+            }
+        });
+        
+        console.log('Bar chart created successfully');
+        
+        // Pie Chart
+        const pieCtx = document.getElementById('vehiclePieChart');
+        if (!pieCtx) {
+            console.error('Pie chart canvas not found');
+            return;
+        }
+        
+        pieChart = new Chart(pieCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Motorcycle', 'Passenger Car', 'Emergency Vehicle'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#10b981', '#6366f1', '#f59e0b'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { size: 13 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+        
+        console.log('Pie chart created successfully');
+    } catch (error) {
+        console.error('Error creating charts:', error);
+    }
 }
 
 // ============================================
@@ -242,7 +295,9 @@ function setupEventListeners() {
         checkbox.addEventListener('change', function() {
             const vehicleType = this.dataset.vehicle;
             if (this.checked) {
-                selectedVehicleTypes.push(vehicleType);
+                if (!selectedVehicleTypes.includes(vehicleType)) {
+                    selectedVehicleTypes.push(vehicleType);
+                }
             } else {
                 selectedVehicleTypes = selectedVehicleTypes.filter(t => t !== vehicleType);
             }
@@ -264,7 +319,6 @@ function adjustDateRange(direction) {
     
     const start = new Date(startDate.value);
     const end = new Date(endDate.value);
-    const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     
     if (currentView === 'daily') {
         start.setDate(start.getDate() + direction);
@@ -277,8 +331,8 @@ function adjustDateRange(direction) {
         end.setMonth(end.getMonth() + direction);
     }
     
-    startDate.valueAsDate = start;
-    endDate.valueAsDate = end;
+    startDate.value = start.toISOString().split('T')[0];
+    endDate.value = end.toISOString().split('T')[0];
     
     updateData();
 }
@@ -289,8 +343,12 @@ function updateData() {
     
     if (!startDate || !endDate) return;
     
+    console.log('Updating data for:', startDate, 'to', endDate, 'View:', currentView);
+    
     // Generate new data
-    currentData = generateSampleData(startDate, endDate, currentView);
+    currentData = generateDataForView(startDate, endDate, currentView);
+    
+    console.log('Generated data points:', currentData.length);
     
     // Update all displays
     updateStatistics();
@@ -299,37 +357,23 @@ function updateData() {
 }
 
 function updateStatistics() {
-    let mayorGilTotal = 0;
-    let sumulongTotal = 0;
-    let peakHour = '';
-    let peakCount = 0;
+    let totalVehicles = 0;
     
     currentData.forEach(entry => {
-        const mayorGil = Object.values(entry.mayor_gil_fernando).reduce((a, b) => a + b, 0);
-        const sumulong = Object.values(entry.sumulong_highway).reduce((a, b) => a + b, 0);
-        const total = mayorGil + sumulong;
-        
-        mayorGilTotal += mayorGil;
-        sumulongTotal += sumulong;
-        
-        if (total > peakCount) {
-            peakCount = total;
-            peakHour = entry.time;
-        }
+        totalVehicles += entry.total || 0;
     });
     
-    const average = Math.round((mayorGilTotal + sumulongTotal) / currentData.length);
+    const average = currentData.length > 0 ? Math.round(totalVehicles / currentData.length) : 0;
     
     // Animate numbers
-    animateValue('mayorGilTotal', 0, mayorGilTotal, 1000);
-    animateValue('sumulongTotal', 0, sumulongTotal, 1000);
-    animateValue('averageCount', 0, average, 1000);
-    
-    document.getElementById('peakTime').textContent = peakHour || '--:--';
+    animateValue('totalVehicles', 0, totalVehicles, 800);
+    animateValue('averageCount', 0, average, 800);
 }
 
 function animateValue(id, start, end, duration) {
     const element = document.getElementById(id);
+    if (!element) return;
+    
     const range = end - start;
     const increment = range / (duration / 16);
     let current = start;
@@ -345,9 +389,13 @@ function animateValue(id, start, end, duration) {
 }
 
 function updateBarChart() {
+    if (!barChart) {
+        console.error('Bar chart not initialized');
+        return;
+    }
+    
     const labels = [];
-    const mayorGilData = [];
-    const sumulongData = [];
+    const data = [];
     
     currentData.forEach(entry => {
         if (currentView === 'daily') {
@@ -358,18 +406,22 @@ function updateBarChart() {
                 day: 'numeric' 
             }));
         }
-        
-        mayorGilData.push(Object.values(entry.mayor_gil_fernando).reduce((a, b) => a + b, 0));
-        sumulongData.push(Object.values(entry.sumulong_highway).reduce((a, b) => a + b, 0));
+        data.push(entry.total);
     });
     
+    console.log('Updating bar chart with', data.length, 'data points');
+    
     barChart.data.labels = labels;
-    barChart.data.datasets[0].data = mayorGilData;
-    barChart.data.datasets[1].data = sumulongData;
+    barChart.data.datasets[0].data = data;
     barChart.update();
 }
 
 function updatePieChart() {
+    if (!pieChart) {
+        console.error('Pie chart not initialized');
+        return;
+    }
+    
     const totals = {
         motorcycle: 0,
         passenger_car: 0,
@@ -377,11 +429,15 @@ function updatePieChart() {
     };
     
     currentData.forEach(entry => {
-        Object.keys(totals).forEach(type => {
-            if (selectedVehicleTypes.includes(type)) {
-                totals[type] += entry.mayor_gil_fernando[type] + entry.sumulong_highway[type];
-            }
-        });
+        if (selectedVehicleTypes.includes('motorcycle')) {
+            totals.motorcycle += entry.motorcycle || 0;
+        }
+        if (selectedVehicleTypes.includes('passenger_car')) {
+            totals.passenger_car += entry.passenger_car || 0;
+        }
+        if (selectedVehicleTypes.includes('emergency_vehicle')) {
+            totals.emergency_vehicle += entry.emergency_vehicle || 0;
+        }
     });
     
     const labels = [];
@@ -408,6 +464,8 @@ function updatePieChart() {
         }
     });
     
+    console.log('Updating pie chart with data:', data);
+    
     pieChart.data.labels = labels;
     pieChart.data.datasets[0].data = data;
     pieChart.data.datasets[0].backgroundColor = colors;
@@ -423,24 +481,12 @@ function downloadData() {
     const endDate = document.getElementById('endDate').value;
     
     // Create CSV content
-    let csv = 'Date,Time,Location,Motorcycle,Passenger Car,Emergency Vehicle,Total\n';
+    let csv = 'Date,Time,Motorcycle,Passenger Car,Emergency Vehicle,Total\n';
     
     currentData.forEach(entry => {
-        // Mayor Gil Fernando Ave
-        const mayorGilTotal = Object.values(entry.mayor_gil_fernando).reduce((a, b) => a + b, 0);
-        csv += `${entry.date},${entry.time},Mayor Gil Fernando Ave,`;
-        csv += `${entry.mayor_gil_fernando.motorcycle},`;
-        csv += `${entry.mayor_gil_fernando.passenger_car},`;
-        csv += `${entry.mayor_gil_fernando.emergency_vehicle},`;
-        csv += `${mayorGilTotal}\n`;
-        
-        // Sumulong Highway
-        const sumulongTotal = Object.values(entry.sumulong_highway).reduce((a, b) => a + b, 0);
-        csv += `${entry.date},${entry.time},Sumulong Highway,`;
-        csv += `${entry.sumulong_highway.motorcycle},`;
-        csv += `${entry.sumulong_highway.passenger_car},`;
-        csv += `${entry.sumulong_highway.emergency_vehicle},`;
-        csv += `${sumulongTotal}\n`;
+        const date = entry.date || startDate;
+        const time = entry.time || '00:00';
+        csv += `${date},${time},${entry.motorcycle},${entry.passenger_car},${entry.emergency_vehicle},${entry.total}\n`;
     });
     
     // Create download link
