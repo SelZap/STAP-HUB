@@ -217,6 +217,33 @@ function initializeCharts() {
 // ============================================
 
 function setupEventListeners() {
+    // Filter button toggle
+    document.getElementById('filterBtn').addEventListener('click', function() {
+        const filterPanel = document.getElementById('filterPanel');
+        filterPanel.classList.toggle('hidden');
+    });
+    
+    // Clear filters button
+    document.getElementById('clearFilters').addEventListener('click', function() {
+        // Reset view to weekly
+        document.querySelectorAll('.view-btn-small').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('[data-view="weekly"]').classList.add('active');
+        currentView = 'weekly';
+        
+        // Reset all vehicle type checkboxes
+        selectedVehicleTypes = ['motorcycle', 'passenger_car', 'emergency_vehicle'];
+        document.querySelectorAll('input[data-vehicle]').forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        
+        // Update filter count
+        updateFilterCount();
+        
+        // Update data and charts
+        updateData();
+        updatePieChart();
+    });
+    
     // Date navigation
     document.getElementById('prevPeriod').addEventListener('click', function() {
         adjustDateRange(-1);
@@ -230,18 +257,19 @@ function setupEventListeners() {
     document.getElementById('startDate').addEventListener('change', updateData);
     document.getElementById('endDate').addEventListener('change', updateData);
     
-    // View buttons
-    document.querySelectorAll('.view-btn').forEach(btn => {
+    // View buttons (updated selector)
+    document.querySelectorAll('.view-btn-small').forEach(btn => {
         btn.addEventListener('click', function() {
-            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-btn-small').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentView = this.dataset.view;
+            updateFilterCount();
             updateData();
         });
     });
     
-    // Vehicle type filters
-    document.querySelectorAll('.filter-checkbox input').forEach(checkbox => {
+    // Vehicle type filters (updated selector)
+    document.querySelectorAll('input[data-vehicle]').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const vehicleType = this.dataset.vehicle;
             if (this.checked) {
@@ -251,12 +279,36 @@ function setupEventListeners() {
             } else {
                 selectedVehicleTypes = selectedVehicleTypes.filter(t => t !== vehicleType);
             }
+            updateFilterCount();
             updatePieChart();
         });
     });
     
     // Download button
     document.getElementById('downloadData').addEventListener('click', downloadData);
+}
+
+// Update filter count badge
+function updateFilterCount() {
+    const filterCount = document.getElementById('filterCount');
+    let count = 0;
+    
+    // Count if not on default view (weekly)
+    if (currentView !== 'weekly') {
+        count++;
+    }
+    
+    // Count if not all vehicle types are selected
+    if (selectedVehicleTypes.length !== 3) {
+        count++;
+    }
+    
+    if (count > 0) {
+        filterCount.textContent = count;
+        filterCount.classList.remove('hidden');
+    } else {
+        filterCount.classList.add('hidden');
+    }
 }
 
 // ============================================

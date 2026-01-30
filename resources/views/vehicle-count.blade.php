@@ -22,32 +22,116 @@
 
     <!-- Main Container -->
     <main class="container">
-        <!-- Controls Section -->
-        <section class="controls-section">
-            <div class="date-controls">
-                <button class="nav-btn" id="prevPeriod">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M15.41 7.41L14 6L8 12L14 18L15.41 16.59L10.83 12Z"/>
+        <!-- Header Section -->
+        <section class="page-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z" fill="#6366f1"/>
                     </svg>
-                </button>
-                
-                <div class="date-picker-wrapper">
-                    <input type="date" id="startDate" class="date-input">
-                    <span class="date-separator">-</span>
-                    <input type="date" id="endDate" class="date-input">
+                </div>
+                <div>
+                    <h1>Vehicle Count</h1>
+                    <p>View and analyze historical vehicle counting data</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Info Cards Section -->
+        <section class="info-section">
+            <div class="info-card">
+                <div class="info-icon camera">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17 10.5V7C17 6.45 16.55 6 16 6H4C3.45 6 3 6.45 3 7V17C3 17.55 3.45 18 4 18H16C16.55 18 17 17.55 17 17V13.5L21 17.5V6.5L17 10.5Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="info-label">Intersection</p>
+                    <p class="info-value">Mayor Gil Fernando Ave & Sumulong Highway</p>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon tracking">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12C2 17.52 6.47 22 11.99 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 11.99 2ZM12 20C7.58 20 4 16.42 4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20ZM12.5 7H11V13L16.25 16.15L17 14.92L12.5 12.25V7Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="info-label">Tracking Period</p>
+                    <p class="info-value">24 Hours (Every Day)</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search and Filters Section -->
+        <section class="search-filter-section">
+            <div class="search-filter-controls">
+                <div class="date-controls-wrapper">
+                    <button class="nav-btn" id="prevPeriod">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15.41 7.41L14 6L8 12L14 18L15.41 16.59L10.83 12Z"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="date-picker-wrapper">
+                        <input type="date" id="startDate" class="date-input">
+                        <span class="date-separator">-</span>
+                        <input type="date" id="endDate" class="date-input">
+                    </div>
+                    
+                    <button class="nav-btn" id="nextPeriod">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8.59 16.59L10 18L16 12L10 6L8.59 7.41L13.17 12Z"/>
+                        </svg>
+                    </button>
                 </div>
                 
-                <button class="nav-btn" id="nextPeriod">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8.59 16.59L10 18L16 12L10 6L8.59 7.41L13.17 12Z"/>
+                <button id="filterBtn" class="filter-button">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                     </svg>
+                    Filters
+                    <span id="filterCount" class="filter-badge hidden">0</span>
                 </button>
             </div>
+        </section>
 
-            <div class="view-controls">
-                <button class="view-btn" data-view="daily">Daily</button>
-                <button class="view-btn active" data-view="weekly">Weekly</button>
-                <button class="view-btn" data-view="monthly">Monthly</button>
+        <!-- Filter Panel -->
+        <section id="filterPanel" class="filter-panel hidden">
+            <div class="filter-grid-3">
+                <div>
+                    <label class="filter-label-block">View Type</label>
+                    <div class="view-button-group">
+                        <button class="view-btn-small" data-view="daily">Daily</button>
+                        <button class="view-btn-small active" data-view="weekly">Weekly</button>
+                        <button class="view-btn-small" data-view="monthly">Monthly</button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="filter-label-block">Vehicle Types</label>
+                    <div class="checkbox-group-vertical">
+                        <label class="checkbox-label-inline">
+                            <input type="checkbox" checked data-vehicle="motorcycle" class="checkbox-input">
+                            <span>Motorcycle</span>
+                        </label>
+                        <label class="checkbox-label-inline">
+                            <input type="checkbox" checked data-vehicle="passenger_car" class="checkbox-input">
+                            <span>Passenger Car</span>
+                        </label>
+                        <label class="checkbox-label-inline">
+                            <input type="checkbox" checked data-vehicle="emergency_vehicle" class="checkbox-input">
+                            <span>Emergency Vehicle</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="filter-actions-column">
+                    <button id="clearFilters" class="clear-filters-btn">
+                        Clear All
+                    </button>
+                </div>
             </div>
         </section>
 
