@@ -1,22 +1,22 @@
 // Mock data structure for footage archive
-// In production, this would come from backend/database
+// Using YouTube embed for video playback
 const footageArchive = [
     {
         id: 1,
-        filename: 'CCTV Angle.MOV',
-        date: '2026-01-27',
+        filename: 'Traffic Intersection - CCTV Footage',
+        date: '2026-01-31',
         time: '14:30:00',
-        thumbnail: '/videos/thumbnails/IMG_5839.jpg', // or extract from video
-        videoPath: '/videos/CCTV Angle.mp4',
+        thumbnail: 'https://img.youtube.com/vi/WK5_vUGQIv0/maxresdefault.jpg',
+        videoPath: 'https://www.youtube.com/embed/WK5_vUGQIv0',
         location: 'Mayor Gil Fernando Ave & Sumulong Highway'
     },
     {
         id: 2,
-        filename: 'D1 drone shot.mp4',
-        date: '2026-01-27',
-        time: '15:45:00',
-        thumbnail: '/videos/thumbnails/IMG_5840.jpg',
-        videoPath: '/videos/D1 drone shot (1).mp4',
+        filename: 'Traffic Intersection - Drone Footage',
+        date: '2026-01-31',  
+        time: '10:15:00',
+        thumbnail: 'https://img.youtube.com/vi/GMHGfoy9yqY/maxresdefault.jpg',  
+        videoPath: 'https://www.youtube.com/embed/GMHGfoy9yqY',  
         location: 'Mayor Gil Fernando Ave & Sumulong Highway'
     },
 ];
@@ -28,7 +28,7 @@ let filteredFootage = [...footageArchive];
 // DOM Elements
 const dateInput = document.getElementById('footage-date');
 const searchBtn = document.getElementById('searchFootage');
-const videoPlayer = document.getElementById('mainVideo');
+const videoContainer = document.querySelector('.video-container');
 const noVideoMessage = document.getElementById('noVideoMessage');
 const videoInfo = document.getElementById('videoInfo');
 const archiveGrid = document.getElementById('archiveGrid');
@@ -39,12 +39,16 @@ const videoTimeSpan = document.getElementById('videoTime');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    // Set default date to today
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.value = today;
+    console.log('Traffic Footage page loaded');
+    console.log('Available footage dates:', footageArchive.map(f => f.date));
+    
+    // Set default date to January 31, 2026 (where we have footage)
+    dateInput.value = '2026-01-31';
+    
+    console.log('Initial date set to:', dateInput.value);
     
     // Load initial footage
-    loadFootage(today);
+    loadFootage(dateInput.value);
     
     // Event listeners
     searchBtn.addEventListener('click', handleSearch);
@@ -62,6 +66,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // Handle search functionality
 function handleSearch() {
     const selectedDate = dateInput.value;
+    console.log('Search clicked for date:', selectedDate);
+    
     if (!selectedDate) {
         alert('Please select a date');
         return;
@@ -72,16 +78,24 @@ function handleSearch() {
 
 // Load footage for selected date
 function loadFootage(date) {
+    console.log('Loading footage for date:', date);
+    console.log('Available footage:', footageArchive);
+    
     // Filter footage by date
     filteredFootage = footageArchive.filter(item => item.date === date);
+    
+    console.log('Filtered footage count:', filteredFootage.length);
+    console.log('Filtered footage:', filteredFootage);
     
     // Update archive grid
     renderArchiveGrid();
     
     // If footage exists, load the first one by default
     if (filteredFootage.length > 0) {
+        console.log('Loading first video');
         loadVideo(filteredFootage[0]);
     } else {
+        console.log('No footage found for this date');
         clearVideo();
     }
 }
@@ -109,11 +123,8 @@ function createArchiveItem(item, isActive = false) {
     div.className = `archive-item ${isActive ? 'active' : ''}`;
     div.dataset.id = item.id;
     
-    // Create thumbnail (use placeholder if image doesn't exist)
-    const thumbnailSrc = item.thumbnail || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e0e0e0" width="400" height="300"/%3E%3Ctext fill="%235a6c7d" font-family="Arial" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EVideo Thumbnail%3C/text%3E%3C/svg%3E';
-    
     div.innerHTML = `
-        <img src="${thumbnailSrc}" alt="${item.filename}" class="archive-thumbnail" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23e0e0e0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%235a6c7d%22 font-family=%22Arial%22 font-size=%2224%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3EVideo%3C/text%3E%3C/svg%3E'">
+        <img src="${item.thumbnail}" alt="${item.filename}" class="archive-thumbnail" onerror="this.src='https://img.youtube.com/vi/WK5_vUGQIv0/default.jpg'">
         <div class="archive-info">
             <h3>${item.filename}</h3>
             <div class="timestamp">
@@ -127,6 +138,8 @@ function createArchiveItem(item, isActive = false) {
     `;
     
     div.addEventListener('click', () => {
+        console.log('Archive item clicked:', item);
+        
         // Remove active class from all items
         document.querySelectorAll('.archive-item').forEach(el => {
             el.classList.remove('active');
@@ -144,11 +157,36 @@ function createArchiveItem(item, isActive = false) {
 
 // Load video into player
 function loadVideo(item) {
+    console.log('Loading video:', item);
     currentVideo = item;
     
-    // Update video source
-    videoPlayer.src = item.videoPath;
-    videoPlayer.load();
+    // Remove existing video/iframe
+    const existingVideo = videoContainer.querySelector('video');
+    const existingIframe = videoContainer.querySelector('iframe');
+    if (existingVideo) {
+        console.log('Removing existing video element');
+        existingVideo.remove();
+    }
+    if (existingIframe) {
+        console.log('Removing existing iframe');
+        existingIframe.remove();
+    }
+    
+    // Create YouTube iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = item.videoPath;
+    iframe.width = "100%";
+    iframe.height = "600";
+    iframe.frameBorder = "0";
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    iframe.allowFullscreen = true;
+    iframe.style.maxHeight = "600px";
+    iframe.style.borderRadius = "8px";
+    
+    console.log('Created iframe with src:', iframe.src);
+    
+    // Insert iframe before the no-video message
+    videoContainer.insertBefore(iframe, noVideoMessage);
     
     // Hide no video message
     noVideoMessage.classList.add('hidden');
@@ -160,14 +198,18 @@ function loadVideo(item) {
     // Enable download button
     downloadBtn.disabled = false;
     
-    // Play video (optional - remove if you don't want autoplay)
-    // videoPlayer.play();
+    console.log('Video loaded successfully');
 }
 
 // Clear video player
 function clearVideo() {
+    console.log('Clearing video player');
     currentVideo = null;
-    videoPlayer.src = '';
+    
+    // Remove iframe if exists
+    const existingIframe = videoContainer.querySelector('iframe');
+    if (existingIframe) existingIframe.remove();
+    
     noVideoMessage.classList.remove('hidden');
     videoDateSpan.textContent = '-';
     videoTimeSpan.textContent = '-';
@@ -178,13 +220,12 @@ function clearVideo() {
 function handleDownload() {
     if (!currentVideo) return;
     
-    // Create a temporary anchor element to trigger download
-    const link = document.createElement('a');
-    link.href = currentVideo.videoPath;
-    link.download = currentVideo.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Open YouTube video in new tab (since we can't directly download YouTube videos)
+    const youtubeUrl = currentVideo.videoPath.replace('/embed/', '/watch?v=');
+    window.open(youtubeUrl, '_blank');
+    
+    // You can also show a message to the user
+    alert('Opening YouTube video. You can use YouTube\'s download options or third-party tools to download the video.');
 }
 
 // Format date (YYYY-MM-DD to readable format)
@@ -201,24 +242,4 @@ function formatTime(timeString) {
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
-}
-
-// Utility: Generate thumbnail from video (optional advanced feature)
-// This would require canvas manipulation - can be added later if needed
-function generateThumbnail(videoPath, callback) {
-    const video = document.createElement('video');
-    video.src = videoPath;
-    video.currentTime = 1; // Capture frame at 1 second
-    
-    video.addEventListener('loadeddata', function() {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const thumbnailUrl = canvas.toDataURL('image/jpeg');
-        callback(thumbnailUrl);
-    });
 }
