@@ -22,25 +22,11 @@
 
     <!-- Main Content -->
     <div class="container">
-        <!-- Date Selection -->
-        <div class="controls-section">
-            <div class="date-selector">
-                <label for="footage-date">Select Date:</label>
-                <input type="date" id="footage-date" name="footage-date">
-            </div>
-            
-            <button class="search-btn" id="searchFootage">
-                <span>Search Footage</span>
-            </button>
-        </div>
 
         <!-- Video Player Section -->
         <div class="video-section">
             <div class="video-container">
-                <video id="mainVideo" controls>
-                    <source src="" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <!-- YouTube iframe will be inserted here by JavaScript -->
                 
                 <div class="no-video-message" id="noVideoMessage">
                     <div class="message-content">
@@ -76,9 +62,21 @@
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    Download Footage
+                    Open in YouTube
                 </button>
             </div>
+        </div>
+
+        <!-- Date Selection -->
+        <div class="controls-section">
+            <div class="date-selector">
+                <label for="footage-date">Select Date:</label>
+                <input type="date" id="footage-date" name="footage-date">
+            </div>
+            
+            <button class="search-btn" id="searchFootage">
+                <span>Search Footage</span>
+            </button>
         </div>
 
         <!-- Archive Grid -->
