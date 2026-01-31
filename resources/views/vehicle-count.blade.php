@@ -22,44 +22,36 @@
 
     <!-- Main Container -->
     <main class="container">
-        <!-- Header Section -->
-        <section class="page-header">
-            <div class="header-content">
-                <div class="header-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z" fill="#6366f1"/>
-                    </svg>
-                </div>
-                <div>
-                    <h1>Vehicle Count</h1>
-                    <p>View and analyze historical vehicle counting data</p>
-                </div>
-            </div>
-        </section>
 
-        <!-- Info Cards Section -->
-        <section class="info-section">
-            <div class="info-card">
-                <div class="info-icon camera">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17 10.5V7C17 6.45 16.55 6 16 6H4C3.45 6 3 6.45 3 7V17C3 17.55 3.45 18 4 18H16C16.55 18 17 17.55 17 17V13.5L21 17.5V6.5L17 10.5Z"/>
-                    </svg>
+        <!-- Statistics Cards -->
+        <section class="stats-section">
+            <div class="stat-card total">
+                <div class="stat-header">
+                    <h3>Total Vehicles</h3>
+                    <div class="stat-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01Z" fill="currentColor"/>
+                        </svg>
+                    </div>
                 </div>
-                <div>
-                    <p class="info-label">Intersection</p>
-                    <p class="info-value">Mayor Gil Fernando Ave & Sumulong Highway</p>
+                <div class="stat-value">
+                    <span class="number" id="totalVehicles">0</span>
+                    <span class="label">vehicles</span>
                 </div>
             </div>
-            
-            <div class="info-card">
-                <div class="info-icon tracking">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M11.99 2C6.47 2 2 6.48 2 12C2 17.52 6.47 22 11.99 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 11.99 2ZM12 20C7.58 20 4 16.42 4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20ZM12.5 7H11V13L16.25 16.15L17 14.92L12.5 12.25V7Z"/>
-                    </svg>
+
+            <div class="stat-card average">
+                <div class="stat-header">
+                    <h3>Average per Period</h3>
+                    <div class="stat-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM9 17H7V10H9V17ZM13 17H11V7H13V17ZM17 17H15V13H17V17Z"/>
+                        </svg>
+                    </div>
                 </div>
-                <div>
-                    <p class="info-label">Tracking Period</p>
-                    <p class="info-value">24 Hours (Every Day)</p>
+                <div class="stat-value">
+                    <span class="number" id="averageCount">0</span>
+                    <span class="label">vehicles</span>
                 </div>
             </div>
         </section>
@@ -135,38 +127,6 @@
             </div>
         </section>
 
-        <!-- Statistics Cards -->
-        <section class="stats-section">
-            <div class="stat-card total">
-                <div class="stat-header">
-                    <h3>Total Vehicles</h3>
-                    <div class="stat-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01Z" fill="currentColor"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="stat-value">
-                    <span class="number" id="totalVehicles">0</span>
-                    <span class="label">vehicles</span>
-                </div>
-            </div>
-
-            <div class="stat-card average">
-                <div class="stat-header">
-                    <h3>Average per Period</h3>
-                    <div class="stat-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM9 17H7V10H9V17ZM13 17H11V7H13V17ZM17 17H15V13H17V17Z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="stat-value">
-                    <span class="number" id="averageCount">0</span>
-                    <span class="label">vehicles</span>
-                </div>
-            </div>
-        </section>
 
         <!-- Charts Section -->
         <section class="charts-section">
