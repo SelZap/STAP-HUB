@@ -2,34 +2,95 @@
 
 namespace Database\Seeders;
 
+use App\Models\Camera;
+use App\Models\TrafficSnapshot;
 use Illuminate\Database\Seeder;
-use App\Models\TrafficArchive;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class TrafficArchiveSeeder extends Seeder
 {
+    private array $sampleImages = [
+        'https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg',
+        'https://res.cloudinary.com/demo/image/upload/v1371281596/sample_eggplant.jpg',
+        'https://res.cloudinary.com/demo/image/upload/v1371281596/sample_elvish.jpg',
+        'https://res.cloudinary.com/demo/image/upload/v1371281596/sample_sea_turtle.jpg',
+        'https://res.cloudinary.com/demo/image/upload/v1371281596/sample.jpg',
+    ];
+
+    private function getVehicleCount(int $hour): int
+    {
+        if (($hour >= 7 && $hour <= 9) || ($hour >= 17 && $hour <= 20)) {
+            return rand(60, 120);
+        }
+        if ($hour >= 10 && $hour <= 16) {
+            return rand(30, 70);
+        }
+        return rand(2, 25);
+    }
+
+    private function getCongestionFromCount(int $count): string
+    {
+        if ($count >= 90) return 'severe';
+        if ($count >= 60) return 'heavy';
+        if ($count >= 30) return 'moderate';
+        return 'free_flow';
+    }
+
     public function run(): void
     {
-        $archives = [
-            ['archive_id' => 'AR-24612474-53', 'date' => '2024-03-25', 'time' => '18:45:00', 'gil_fernando_los' => 'C', 'sumulong_los' => 'B', 'status' => 'Pending'],
-            ['archive_id' => 'AR-24536474-45', 'date' => '2024-03-25', 'time' => '12:30:00', 'gil_fernando_los' => 'A', 'sumulong_los' => 'A', 'status' => 'Completed'],
-            ['archive_id' => 'AR-26466374-44', 'date' => '2024-03-24', 'time' => '15:20:00', 'gil_fernando_los' => 'D', 'sumulong_los' => 'C', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24655532-11', 'date' => '2024-03-23', 'time' => '10:55:00', 'gil_fernando_los' => 'B', 'sumulong_los' => 'B', 'status' => 'Completed'],
-            ['archive_id' => 'AR-64642415-23', 'date' => '2024-03-23', 'time' => '04:30:00', 'gil_fernando_los' => 'A', 'sumulong_los' => 'A', 'status' => 'Completed'],
-            ['archive_id' => 'AR-64641474-51', 'date' => '2024-03-22', 'time' => '17:15:00', 'gil_fernando_los' => 'E', 'sumulong_los' => 'D', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24242474-63', 'date' => '2024-03-22', 'time' => '11:40:00', 'gil_fernando_los' => 'C', 'sumulong_los' => 'C', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24612424-12', 'date' => '2024-03-21', 'time' => '14:05:00', 'gil_fernando_los' => 'B', 'sumulong_los' => 'A', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24615374-53', 'date' => '2024-03-21', 'time' => '09:20:00', 'gil_fernando_los' => 'D', 'sumulong_los' => 'C', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24451474-32', 'date' => '2024-03-21', 'time' => '09:15:00', 'gil_fernando_los' => 'A', 'sumulong_los' => 'B', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24612475-54', 'date' => '2024-03-20', 'time' => '16:30:00', 'gil_fernando_los' => 'F', 'sumulong_los' => 'E', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24536475-46', 'date' => '2024-03-20', 'time' => '08:45:00', 'gil_fernando_los' => 'B', 'sumulong_los' => 'A', 'status' => 'Completed'],
-            ['archive_id' => 'AR-26466375-45', 'date' => '2024-03-19', 'time' => '13:10:00', 'gil_fernando_los' => 'C', 'sumulong_los' => 'D', 'status' => 'Completed'],
-            ['archive_id' => 'AR-24655533-12', 'date' => '2024-03-19', 'time' => '19:25:00', 'gil_fernando_los' => 'E', 'sumulong_los' => 'D', 'status' => 'Completed'],
-            ['archive_id' => 'AR-64642416-24', 'date' => '2024-03-18', 'time' => '07:50:00', 'gil_fernando_los' => 'A', 'sumulong_los' => 'A', 'status' => 'Completed'],
-        ];
+        DB::table('traffic_snapshots')->truncate();
 
-        foreach ($archives as $archive) {
-            TrafficArchive::create($archive);
+        $cameraIds = Camera::where('status', 'active')->pluck('camera_id');
+
+        if ($cameraIds->isEmpty()) {
+            $this->command->warn('No active cameras found. Run CameraSeeder first.');
+            return;
         }
+
+        $snapshots = [];
+        $now       = Carbon::now();
+
+        for ($daysAgo = 7; $daysAgo >= 0; $daysAgo--) {
+            for ($hour = 0; $hour < 24; $hour++) {
+                for ($minute = 0; $minute < 60; $minute += 15) {
+                    $capturedAt = $now->copy()
+                        ->subDays($daysAgo)
+                        ->setHour($hour)
+                        ->setMinute($minute)
+                        ->setSecond(0);
+
+                    foreach ($cameraIds as $cameraId) {
+                        $total      = $this->getVehicleCount($hour);
+                        $congestion = $this->getCongestionFromCount($total);
+
+                        $snapshots[] = [
+                            'camera_id'          => $cameraId,
+                            'vehicle_count'      => $total,
+                            'cars'               => (int)($total * 0.55),
+                            'motorcycles'        => (int)($total * 0.25),
+                            'trucks'             => (int)($total * 0.10),
+                            'buses'              => (int)($total * 0.07),
+                            'emergency_vehicles' => rand(0, 1),
+                            'congestion_level'   => $congestion,
+                            'image_url'          => $this->sampleImages[array_rand($this->sampleImages)],
+                            'video_url'          => null,
+                            'captured_at'        => $capturedAt->toDateTimeString(),
+                        ];
+
+                        if (count($snapshots) >= 500) {
+                            TrafficSnapshot::insert($snapshots);
+                            $snapshots = [];
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!empty($snapshots)) {
+            TrafficSnapshot::insert($snapshots);
+        }
+
+        $this->command->info('Traffic archive seeded successfully.');
     }
 }

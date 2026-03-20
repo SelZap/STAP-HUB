@@ -2,22 +2,28 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
-    // database/seeders/DatabaseSeeder.php
     {
-     $this->call([
-        TrafficArchiveSeeder::class,
-      ]);
+        // Disable FK checks so truncate works cleanly across all seeders
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        $this->call([
+            AdminSeeder::class,
+            StapNodeSeeder::class,
+            CameraSeeder::class,
+            TrafficLightSeeder::class,
+            TrafficArchiveSeeder::class,
+            WeatherLogSeeder::class,
+            AlertSeeder::class,
+            FootageRequestSeeder::class,
+        ]);
+
+        // Re-enable FK checks after all seeders finish
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 }
