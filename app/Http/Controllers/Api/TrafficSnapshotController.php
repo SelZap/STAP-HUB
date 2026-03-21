@@ -4,48 +4,71 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrafficSnapshot;
-use App\Models\Camera;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TrafficSnapshotController extends Controller
 {
+    protected CloudinaryService $cloudinary;
+
+    public function __construct(CloudinaryService $cloudinary)
+    {
+        $this->cloudinary = $cloudinary;
+    }
+
     /**
-     * Receive a traffic snapshot posted by a STAP Node.
-     *
-     * Expects JSON payload with camera_id, vehicle_count,
-     * congestion_level, image_url (Cloudinary URL), and captured_at.
+     * Receive and store a traffic snapshot from a STAP Node.
+     * POST /api/snapshots
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'camera_id'        => 'required|exists:cameras,id',
-            'vehicle_count'    => 'required|integer|min:0',
-            'congestion_level' => 'required|in:low,moderate,high,severe',
-            'image_url'        => 'nullable|url',
-            'video_url'        => 'nullable|url',
-            'captured_at'      => 'required|date',
-            'vehicle_breakdown' => 'nullable|array',  // e.g. { "car": 10, "truck": 2, ... }
+        $validated = $request->validate([
+            'camera_id'           => 'required|integer|exists:cameras,camera_id',
+            'cars'                => 'required|integer|min:0',
+            'trucks'              => 'required|integer|min:0',
+            'motorcycles'         => 'required|integer|min:0',
+            'buses'               => 'required|integer|min:0',
+            'emergency_vehicles'  => 'required|integer|min:0',
+            'congestion'          => 'required|in:free_flow,moderate,heavy,severe',
+            'snapshot_time'       => 'required|date',
+            'image'               => 'nullable|string',  // base64 image from STAP Node
+            'video'               => 'nullable|string',  // base64 video from STAP Node
         ]);
 
-        // Verify camera belongs to authenticated node
-        $node   = $request->attributes->get('stap_node');
-        $camera = Camera::where('id', $request->camera_id)
-                        ->where('node_id', $node->id)
-                        ->firstOrFail();
+        $imageUrl = null;
+        $videoUrl = null;
+
+        if (!empty($validated['image'])) {
+            $imageUrl = $this->cloudinary->uploadImage($validated['image']);
+            if (!$imageUrl) {
+                Log::warning('Snapshot image upload to Cloudinary failed for camera_id: ' . $validated['camera_id']);
+            }
+        }
+
+        if (!empty($validated['video'])) {
+            $videoUrl = $this->cloudinary->uploadVideo($validated['video']);
+            if (!$videoUrl) {
+                Log::warning('Snapshot video upload to Cloudinary failed for camera_id: ' . $validated['camera_id']);
+            }
+        }
 
         $snapshot = TrafficSnapshot::create([
-            'camera_id'         => $camera->id,
-            'vehicle_count'     => $request->vehicle_count,
-            'congestion_level'  => $request->congestion_level,
-            'image_url'         => $request->image_url,
-            'video_url'         => $request->video_url,
-            'captured_at'       => $request->captured_at,
-            'vehicle_breakdown' => $request->vehicle_breakdown,
+            'camera_id'          => $validated['camera_id'],
+            'cars'               => $validated['cars'],
+            'trucks'             => $validated['trucks'],
+            'motorcycles'        => $validated['motorcycles'],
+            'buses'              => $validated['buses'],
+            'emergency_vehicles' => $validated['emergency_vehicles'],
+            'congestion'         => $validated['congestion'],
+            'snapshot_time'      => $validated['snapshot_time'],
+            'image_url'          => $imageUrl,
+            'video_url'          => $videoUrl,
         ]);
 
-        // Broadcast to dashboard in real-time
-        // TODO: event(new TrafficSnapshotReceived($snapshot));
-
-        return response()->json(['message' => 'Snapshot recorded.', 'id' => $snapshot->id], 201);
+        return response()->json([
+            'message'  => 'Snapshot received successfully.',
+            'snapshot' => $snapshot,
+        ], 201);
     }
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\TrafficSnapshotController;
 use App\Http\Controllers\Api\WeatherLogController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\NodeHeartbeatController;
+use App\Http\Controllers\Api\FootageRequestController;
 
 Route::middleware('auth.node')->prefix('v1')->name('api.v1.')->group(function () {
 
@@ -26,4 +27,8 @@ Route::middleware('auth.node')->prefix('v1')->name('api.v1.')->group(function ()
 
     // Alert ingestion
     Route::post('/alerts', [AlertController::class, 'store'])->name('alerts.store');
+
+    // Footage upload for approved footage requests
+    Route::post('/footage-requests/{footage_request_id}/upload', [FootageRequestController::class, 'upload'])->name('footage.upload');
+
 });
