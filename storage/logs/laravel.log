@@ -2369,3 +2369,5 @@ Did you mean one of these?
 #42 C:/Users/Crissel Zapatero/Desktop/Academics/XAMPP/htdocs/STAPHub/artisan(16): Illuminate/Foundation/Application->handleCommand(Object(Symfony/Component/Console/Input/ArgvInput))
 #43 {main}
 "} 
+[2026-03-21 05:06:00] local.ERROR: Cloudinary image upload failed: Trying to access array offset on value of type null  
+[2026-03-21 05:06:00] local.WARNING: Snapshot image upload to Cloudinary failed for camera_id: 1  
