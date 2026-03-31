@@ -14,7 +14,7 @@ class LandingController extends Controller
     public function index()
     {
         $activeNodes  = StapNode::where('status', 'online')->count();
-        $activeAlerts = Alert::where('resolved', false)->count();
+        $activeAlerts = Alert::where('is_resolved', false)->count();
 
         return view('landing', compact('activeNodes', 'activeAlerts'));
     }

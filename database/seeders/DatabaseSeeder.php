@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
             StapNodeSeeder::class,
             CameraSeeder::class,
             TrafficLightSeeder::class,
-            TrafficArchiveSeeder::class,
+            TrafficSnapshotSeeder::class,
             WeatherLogSeeder::class,
             AlertSeeder::class,
             FootageRequestSeeder::class,
