@@ -1,0 +1,106 @@
+/* ============================================================
+   STAP HUB — Incident Report Page
+   ============================================================ */
+
+.ir-wrap  { width: 100%; }
+
+.ir-intro { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+.ir-intro strong { color: var(--navy); font-weight: 700; }
+
+/* Banners */
+.ir-banner {
+    display: flex; align-items: center; gap: 10px;
+    border-radius: var(--radius-md); padding: 13px 18px;
+    font-size: 13px; font-weight: 600; margin-bottom: 18px;
+}
+.ir-banner-success { background: var(--green-bg); color: var(--green-text); border: 1px solid rgba(41,179,87,.25); }
+.ir-banner-error   { background: var(--red-bg);   color: var(--red-text);   border: 1px solid rgba(224,48,64,.2);  }
+
+/* Cards */
+.ir-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 20px 24px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+.ir-card-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px;
+}
+
+.ir-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--navy); color: #fff;
+    font-size: 11px; font-weight: 800; flex-shrink: 0;
+}
+
+.ir-card-title { font-size: 12px; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: 0.6px; }
+.ir-optional   { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.ir-req        { color: var(--red); font-weight: 700; }
+
+/* Grids */
+.ir-grid-2 { display: grid; grid-template-columns: 1fr 1fr;     gap: 14px; }
+.ir-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* Textarea */
+.ir-textarea   { resize: vertical; min-height: 130px; line-height: 1.6; }
+.ir-input-sm   { max-width: 200px; }
+.ir-char-count { font-size: 11px; color: var(--text-muted); margin-top: 5px; text-align: right; }
+.ir-muted      { opacity: 0.7; }
+
+/* Field errors */
+.ir-err { display: block; font-size: 11px; font-weight: 600; color: var(--red-text); margin-top: 4px; min-height: 16px; }
+
+/* Checkbox group */
+.ir-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.ir-checkbox-btn { cursor: pointer; }
+.ir-checkbox-btn input[type="checkbox"] { display: none; }
+
+.ir-checkbox-btn span {
+    display: inline-flex; align-items: center;
+    padding: 7px 16px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    font-size: 12px; font-weight: 600;
+    color: var(--text-secondary); background: var(--bg-input);
+    transition: var(--transition); user-select: none;
+}
+
+.ir-checkbox-btn input:checked + span { background: var(--navy); border-color: var(--navy); color: #fff; }
+.ir-checkbox-btn:hover span           { border-color: var(--navy); color: var(--navy); }
+
+/* Toggle (Yes/No) */
+.ir-toggle-group { display: flex; gap: 8px; }
+.ir-toggle-btn   { cursor: pointer; }
+.ir-toggle-btn input[type="radio"] { display: none; }
+
+.ir-toggle-btn span {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 9px 28px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); background: var(--bg-input);
+    transition: var(--transition); user-select: none;
+}
+
+.ir-toggle-btn input:checked + span { background: var(--navy); border-color: var(--navy); color: #fff; }
+.ir-toggle-btn:hover span           { border-color: var(--navy); color: var(--navy); }
+
+/* Invalid state */
+.ir-input-invalid { border-color: var(--red) !important; }
+
+/* Submit */
+.ir-submit-row  { display: flex; align-items: center; gap: 16px; padding: 4px 0 8px; }
+.ir-submit-btn  { padding: 12px 32px; font-size: 13.5px; }
+.ir-submit-note { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; }
+
+/* Responsive */
+@media (max-width: 700px) {
+    .ir-grid-2 { grid-template-columns: 1fr; }
+    .ir-grid-3 { grid-template-columns: 1fr; }
+    .ir-submit-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
