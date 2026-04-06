@@ -1,0 +1,79 @@
+/* ============================================================
+   STAP HUB — Dashboard Styles
+   ============================================================ */
+
+.dash-section        { margin-bottom: 24px; }
+.dash-section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.dash-section-title  { font-size: 13px; font-weight: 800; color: var(--navy); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; }
+.dash-section-header .dash-section-title { margin-bottom: 0; }
+
+/* LOS Cards */
+.dash-los-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+
+.dash-los-card {
+    background: var(--bg-card); border-radius: var(--radius-md);
+    border: 1px solid var(--border); padding: 16px 18px;
+    box-shadow: var(--shadow-sm); display: flex;
+    align-items: center; gap: 14px; transition: var(--transition);
+}
+.dash-los-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+.dash-los-number   { font-size: 36px; font-weight: 800; color: var(--navy); line-height: 1; display: block; }
+.dash-los-location { flex: 1; font-size: 13px; font-weight: 600; color: var(--navy); line-height: 1.4; }
+
+/* LOS badge — letter only */
+.dash-los-badge {
+    display: flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: var(--radius-sm);
+    border: 2px solid currentColor; font-size: 22px;
+    font-weight: 900; flex-shrink: 0;
+}
+
+.los-A { color: #1a7a3a; background: rgba(41,179,87,.08);  border-color: rgba(41,179,87,.4);  }
+.los-B { color: #2d7a2d; background: rgba(80,180,80,.08);  border-color: rgba(80,180,80,.4);  }
+.los-C { color: #8a6010; background: rgba(244,185,66,.08); border-color: rgba(244,185,66,.5); }
+.los-D { color: #8a4010; background: rgba(230,120,30,.08); border-color: rgba(230,120,30,.4); }
+.los-E { color: #a02030; background: rgba(224,48,64,.08);  border-color: rgba(224,48,64,.4);  }
+.los-F { color: #7a0020; background: rgba(160,0,30,.10);   border-color: rgba(160,0,30,.4);   }
+
+/* Traffic History Table */
+.dash-history-table .dash-history-time { font-size: 11px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+
+/* Rain & Weather */
+.dash-weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.dash-rain-list { display: flex; flex-direction: column; gap: 8px; }
+.dash-rain-row  { display: flex; align-items: center; gap: 10px; }
+.dash-rain-time { font-size: 11px; font-weight: 600; color: var(--text-secondary); min-width: 65px; flex-shrink: 0; }
+.dash-rain-bar  { flex: 1; height: 7px; }
+.dash-rain-label { font-size: 11px; font-weight: 700; min-width: 85px; text-align: right; flex-shrink: 0; }
+
+/* Forecast */
+.dash-forecast-loading { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px; padding: 10px 0; }
+.dash-forecast-grid    { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+
+.dash-forecast-day {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 8px 4px; border-radius: var(--radius-sm);
+    background: var(--navy-light); border: 1px solid var(--border);
+    transition: var(--transition);
+}
+.dash-forecast-day:hover  { background: var(--border); }
+.dash-forecast-day.today  { background: rgba(27,39,68,.08); border-color: var(--navy); }
+
+.dash-forecast-dow  { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.dash-forecast-day.today .dash-forecast-dow { color: var(--navy); }
+.dash-forecast-icon { font-size: 18px; line-height: 1; }
+.dash-forecast-temp { font-size: 12px; font-weight: 700; color: var(--navy); }
+.dash-forecast-rain { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+.dash-forecast-rain.has-rain { color: #2d7aaa; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .dash-weather-grid  { grid-template-columns: 1fr; }
+    .dash-forecast-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 600px) {
+    .dash-los-number { font-size: 28px; }
+    .dash-los-badge  { width: 38px; height: 38px; font-size: 18px; }
+}
