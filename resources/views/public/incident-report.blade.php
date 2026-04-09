@@ -188,5 +188,9 @@
 @endsection
 
 @push('scripts')
+{{-- Pass the route URL into JS so it works from a static file --}}
+<script>
+    window.STAP_INCIDENT_ROUTE = '{{ route("incident.store") }}';
+</script>
 <script src="{{ asset('js/incident-report.js') }}"></script>
 @endpush

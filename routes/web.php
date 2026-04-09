@@ -31,15 +31,19 @@ Route::get('/', [LandingController::class, 'index'])
 Route::get('/live', [LiveFeedController::class, 'index'])
     ->name('public.live');
 
+// Footage / Data Request
 Route::get('/data-request', [FootageRequestController::class, 'index'])
     ->name('public.request');
-
 Route::post('/data-request', [FootageRequestController::class, 'store'])
     ->name('public.request.store');
+Route::get('/data-request/cameras', [FootageRequestController::class, 'cameras'])
+    ->name('public.cameras');
 
 // Incident Report
-Route::get('/incident-report', [IncidentReportController::class, 'create'])->name('incident.create');
-Route::post('/incident-report', [IncidentReportController::class, 'store'])->name('incident.store');
+Route::get('/incident-report', [IncidentReportController::class, 'create'])
+    ->name('incident.create');
+Route::post('/incident-report', [IncidentReportController::class, 'store'])
+    ->name('incident.store');
 
 // ============================================================
 // ADMIN AUTH (no middleware — login/logout)
@@ -105,10 +109,13 @@ Route::prefix('admin')
             ->name('accounts.update');
         Route::delete('/accounts/{admin_id}', [AccountController::class, 'destroy'])
             ->name('accounts.destroy');
-        
+
         // Incident Reports
-        Route::get('/admin/incident-reports', [IncidentReportController::class, 'index'])->name('admin.incident-reports.index');
-        Route::patch('/admin/incident-reports/{id}/review', [IncidentReportController::class, 'markReviewed'])->name('admin.incident-reports.review');
-        Route::get('/admin/incident-reports/pending-count', [IncidentReportController::class, 'pendingCount'])->name('admin.incident-reports.pending-count');
+        Route::get('/incident-reports', [IncidentReportController::class, 'index'])
+            ->name('incident-reports.index');
+        Route::patch('/incident-reports/{id}/review', [IncidentReportController::class, 'markReviewed'])
+            ->name('incident-reports.review');
+        Route::get('/incident-reports/pending-count', [IncidentReportController::class, 'pendingCount'])
+            ->name('incident-reports.pending-count');
 
     });
