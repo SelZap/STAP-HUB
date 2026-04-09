@@ -4,14 +4,16 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    const form           = document.getElementById('irForm');
-    const submitBtn      = document.getElementById('irSubmitBtn');
-    const btnText        = document.getElementById('irBtnText');
-    const btnSpinner     = document.getElementById('irBtnSpinner');
-    const successBanner  = document.getElementById('irSuccess');
-    const errorBanner    = document.getElementById('irErrorBanner');
-    const injuredGroup   = document.getElementById('injuredCountGroup');
-    const descCount      = document.getElementById('descCount');
+    const form          = document.getElementById('irForm');
+    const submitBtn     = document.getElementById('irSubmitBtn');
+    const btnText       = document.getElementById('irBtnText');
+    const btnSpinner    = document.getElementById('irBtnSpinner');
+    const successBanner = document.getElementById('irSuccess');
+    const errorBanner   = document.getElementById('irErrorBanner');
+    const injuredGroup  = document.getElementById('injuredCountGroup');
+    const descCount     = document.getElementById('descCount');
+
+    if (!form) return;
 
     // --------------------------------------------------------
     // Show/hide injured count based on people_hurt
@@ -20,8 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
         radio.addEventListener('change', function () {
             const show = this.value === '1';
             injuredGroup.style.display = show ? 'block' : 'none';
-            const injuredInput = document.getElementById('injured_count');
-            if (!show) injuredInput.value = '';
+            if (!show) document.getElementById('injured_count').value = '';
         });
     });
 
@@ -40,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --------------------------------------------------------
     form.querySelectorAll('input, select, textarea').forEach(function (el) {
         el.addEventListener('input', function () {
-            const errEl = document.getElementById('err_' + this.name);
+            const errEl = document.getElementById('err_' + this.name.replace('[]', ''));
             if (errEl) errEl.textContent = '';
             this.classList.remove('ir-input-invalid');
         });
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const data = new FormData(form);
 
-        fetch('{{ route("incident.store") }}', {
+        fetch(window.STAP_INCIDENT_ROUTE, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -94,9 +95,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Helpers
     // --------------------------------------------------------
     function setLoading(loading) {
-        submitBtn.disabled  = loading;
-        btnText.style.display    = loading ? 'none'         : 'inline';
-        btnSpinner.style.display = loading ? 'inline-block' : 'none';
+        submitBtn.disabled           = loading;
+        btnText.style.display        = loading ? 'none'         : 'inline';
+        btnSpinner.style.display     = loading ? 'inline-block' : 'none';
     }
 
     function clearErrors() {
@@ -108,12 +109,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showFieldErrors(errors) {
         Object.keys(errors).forEach(function (field) {
-            const errEl = document.getElementById('err_' + field);
+            const key   = field.replace('[]', '');
+            const errEl = document.getElementById('err_' + key);
             if (errEl) errEl.textContent = errors[field][0];
             const input = document.querySelector('[name="' + field + '"]');
             if (input) input.classList.add('ir-input-invalid');
         });
-        // Scroll to first error
         const first = document.querySelector('.ir-input-invalid');
         if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }

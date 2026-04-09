@@ -23,6 +23,7 @@ class FootageRequest extends Model
         'footage_time_end',
         'request_nature',
         'status',
+        'camera_id',
     ];
 
     protected $casts = [
