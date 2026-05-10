@@ -11,148 +11,146 @@ document.addEventListener('DOMContentLoaded', function () {
     const successBanner = document.getElementById('drSuccess');
     const successText   = document.getElementById('drSuccessText');
     const errorBanner   = document.getElementById('drErrorBanner');
-    const cameraSelect  = document.getElementById('camera_id');
 
     if (!form) return;
 
-    // --------------------------------------------------------
-    // Load cameras into the select dropdown
-    // --------------------------------------------------------
-    fetch(window.STAP_DR_ROUTES.cameras, {
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    })
-    .then(function (res) { return res.json(); })
-    .then(function (cameras) {
-        cameraSelect.innerHTML = '<option value="" disabled selected>Select a camera / direction</option>';
-
-        if (!cameras.length) {
-            cameraSelect.innerHTML = '<option value="" disabled selected>No cameras available</option>';
-            return;
-        }
-
-        // Group by location
-        const grouped = {};
-        cameras.forEach(function (cam) {
-            const loc = cam.location || 'Unknown Location';
-            if (!grouped[loc]) grouped[loc] = [];
-            grouped[loc].push(cam);
+    // ── "Other" nature → show specify input ───────────────
+    form.querySelectorAll('[name="request_nature"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            const wrap = document.getElementById('otherReasonWrap');
+            if (wrap) wrap.style.display = this.value === 'other' ? '' : 'none';
         });
+    });
 
-        Object.keys(grouped).forEach(function (location) {
-            const group = document.createElement('optgroup');
-            group.label = location;
+    // ── Multi-date toggle ──────────────────────────────────
+    const multiDateToggle = document.getElementById('multiDateToggle');
+    const multiDateFlag   = document.getElementById('multiDateFlag');
+    const singleDateWrap  = document.getElementById('singleDateWrap');
+    const multiDateWrap   = document.getElementById('multiDateWrap');
 
-            grouped[location].forEach(function (cam) {
-                const opt   = document.createElement('option');
-                opt.value   = cam.camera_id;
-                opt.textContent = cam.label + (cam.direction ? ' — ' + cam.direction : '');
-                group.appendChild(opt);
+    if (multiDateToggle) {
+        multiDateToggle.addEventListener('change', function () {
+            const isMulti = this.checked;
+
+            multiDateFlag.value          = isMulti ? '1' : '0';
+            singleDateWrap.style.display = isMulti ? 'none' : '';
+            multiDateWrap.style.display  = isMulti ? ''     : 'none';
+
+            // Enable/disable so FormData only sends the active fields
+            const singleInput = document.getElementById('footage_date');
+            if (singleInput) singleInput.disabled = isMulti;
+
+            multiDateWrap.querySelectorAll('input[type="date"]').forEach(inp => {
+                inp.disabled = !isMulti;
             });
 
-            cameraSelect.appendChild(group);
+            // Clear date errors on toggle
+            ['footage_date', 'footage_date_start', 'footage_date_end'].forEach(f => {
+                const el = document.getElementById('err_' + f);
+                if (el) el.textContent = '';
+            });
         });
-    })
-    .catch(function () {
-        cameraSelect.innerHTML = '<option value="" disabled selected>Could not load cameras</option>';
-    });
+    }
 
-    // --------------------------------------------------------
-    // Clear field errors on input
-    // --------------------------------------------------------
-    form.querySelectorAll('input, select, textarea').forEach(function (el) {
-        el.addEventListener('change', function () {
-            const key   = this.name.replace('[]', '');
-            const errEl = document.getElementById('err_' + key);
+    // ── Clear per-field error on user input ────────────────
+    form.querySelectorAll('input, textarea').forEach(el => {
+        ['change', 'input'].forEach(ev => el.addEventListener(ev, function () {
+            const errEl = document.getElementById('err_' + this.name);
             if (errEl) errEl.textContent = '';
             this.classList.remove('dr-input-invalid');
-        });
-        el.addEventListener('input', function () {
-            const key   = this.name.replace('[]', '');
-            const errEl = document.getElementById('err_' + key);
-            if (errEl) errEl.textContent = '';
-            this.classList.remove('dr-input-invalid');
-        });
+        }));
     });
 
-    // --------------------------------------------------------
-    // Form submit
-    // --------------------------------------------------------
+    // ── Form submit ────────────────────────────────────────
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         clearErrors();
         setLoading(true);
 
-        const data = new FormData(form);
-
         fetch(window.STAP_DR_ROUTES.store, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-                'Accept': 'application/json',
+                'X-CSRF-TOKEN': form.querySelector('[name="_token"]').value,
+                Accept: 'application/json',
             },
-            body: data,
+            body: new FormData(form),
         })
-        .then(function (res) { return res.json(); })
-        .then(function (res) {
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
             setLoading(false);
-
-            if (res.success) {
-                form.reset();
-                // Reload cameras dropdown after reset
-                cameraSelect.innerHTML = '<option value="" disabled selected>Select a camera / direction</option>';
-
-                successText.textContent = res.message || 'Your request has been submitted. We will contact you via email.';
-                successBanner.style.display = 'flex';
-                successBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                // Re-populate camera dropdown
-                cameraSelect.dispatchEvent(new Event('reload'));
-
-            } else if (res.errors) {
-                showFieldErrors(res.errors);
-                errorBanner.textContent = 'Please fix the errors below and try again.';
-                errorBanner.style.display = 'block';
-                errorBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
+            if (ok && data.success) {
+                onSuccess(data.message);
+            } else if (data.errors) {
+                showFieldErrors(data.errors);
+                showError('Please fix the errors below and try again.');
             } else {
-                errorBanner.textContent = res.message || 'Something went wrong. Please try again.';
-                errorBanner.style.display = 'block';
+                showError(data.message || 'Something went wrong. Please try again.');
             }
         })
-        .catch(function () {
+        .catch(() => {
             setLoading(false);
-            errorBanner.textContent = 'Network error. Please check your connection and try again.';
-            errorBanner.style.display = 'block';
+            showError('Network error. Please check your connection and try again.');
         });
     });
 
-    // --------------------------------------------------------
-    // Helpers
-    // --------------------------------------------------------
-    function setLoading(loading) {
-        submitBtn.disabled       = loading;
-        btnText.style.display    = loading ? 'none'         : 'inline';
-        btnSpinner.style.display = loading ? 'inline-block' : 'none';
+    // ── Helpers ────────────────────────────────────────────
+    function setLoading(on) {
+        submitBtn.disabled       = on;
+        btnText.style.display    = on ? 'none'         : 'inline';
+        btnSpinner.style.display = on ? 'inline-block' : 'none';
     }
 
     function clearErrors() {
         successBanner.style.display = 'none';
         errorBanner.style.display   = 'none';
-        document.querySelectorAll('.dr-err').forEach(function (el) { el.textContent = ''; });
-        document.querySelectorAll('.dr-input-invalid').forEach(function (el) { el.classList.remove('dr-input-invalid'); });
+        form.querySelectorAll('.dr-err').forEach(el => el.textContent = '');
+        form.querySelectorAll('.dr-input-invalid').forEach(el => el.classList.remove('dr-input-invalid'));
+    }
+
+    function showError(msg) {
+        errorBanner.textContent   = msg;
+        errorBanner.style.display = 'block';
+        errorBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function onSuccess(msg) {
+        form.reset();
+
+        // Reset multi-date toggle state
+        if (multiDateToggle) {
+            multiDateToggle.checked      = false;
+            multiDateFlag.value          = '0';
+            singleDateWrap.style.display = '';
+            multiDateWrap.style.display  = 'none';
+            document.getElementById('footage_date').disabled = false;
+            multiDateWrap.querySelectorAll('input[type="date"]').forEach(inp => {
+                inp.disabled = true;
+            });
+        }
+
+        const otherWrap = document.getElementById('otherReasonWrap');
+        if (otherWrap) otherWrap.style.display = 'none';
+
+        successText.textContent     = msg || 'Your request has been submitted. We will contact you via email.';
+        successBanner.style.display = 'flex';
+        successBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function showFieldErrors(errors) {
-        Object.keys(errors).forEach(function (field) {
-            const key   = field.replace('[]', '');
-            const errEl = document.getElementById('err_' + key);
-            if (errEl) errEl.textContent = errors[field][0];
-            const input = form.querySelector('[name="' + field + '"]');
-            if (input) input.classList.add('dr-input-invalid');
+        Object.entries(errors).forEach(([field, messages]) => {
+            const errEl = document.getElementById('err_' + field);
+            if (errEl) errEl.textContent = messages[0];
+
+            // Mark the actual inputs (camera_id radios are named camera_id directly)
+            form.querySelectorAll(`[name="${field}"]`)
+                .forEach(el => el.classList.add('dr-input-invalid'));
         });
-        const first = form.querySelector('.dr-input-invalid');
-        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Scroll to the first visible error message or invalid input
+        const firstErr = form.querySelector('.dr-err:not(:empty)') ||
+                         form.querySelector('.dr-input-invalid');
+        if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
 });
