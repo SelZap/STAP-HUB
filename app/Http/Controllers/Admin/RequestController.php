@@ -152,4 +152,15 @@ class RequestController extends Controller
 
         return response()->json(['message' => 'Request rejected.']);
     }
+    /// Update request status to any valid status (used for flexible status changes)
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate(['status' => 'required|in:approved,rejected,reviewed,requirements_sent']);
+
+        $footageRequest = FootageRequest::findOrFail($id);
+        $footageRequest->status = $request->status;
+        $footageRequest->save();
+
+        return response()->json(['message' => 'Status updated.', 'request' => $footageRequest]);
+    }
 }

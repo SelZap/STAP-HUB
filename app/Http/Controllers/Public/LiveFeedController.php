@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Camera;
-use App\Models\StapNode;
 
 class LiveFeedController extends Controller
 {
@@ -13,7 +12,7 @@ class LiveFeedController extends Controller
      */
     public function index()
     {
-        return view('live-feed');
+        return view('public.live-feed');
     }
 
     /**

@@ -2,18 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Admin extends Authenticatable
+class Admin extends Authenticatable implements JWTSubject
 {
     protected $primaryKey = 'admin_id';
 
     public $timestamps = false;
 
     protected $fillable = [
+        'name',
         'admin_name',
         'email',
+        'password',
         'password_hash',
         'is_superuser',
         'last_login',
@@ -23,6 +27,11 @@ class Admin extends Authenticatable
         'password_hash',
     ];
 
+    protected $appends = [
+        'id',
+        'name',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -30,6 +39,44 @@ class Admin extends Authenticatable
             'created_at'   => 'datetime',
             'last_login'   => 'datetime',
         ];
+    }
+
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims(): array
+    {
+        return [];
+    }
+
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->admin_name,
+            set: fn ($value) => ['admin_name' => $value],
+        );
+    }
+
+    public function getAuthPassword()
+    {
+        return $this->password_hash;
+    }
+
+    protected function id(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->admin_id
+        );
+    }
+
+    protected function password(): Attribute
+    {
+        return Attribute::make(
+            set: fn ($value) => ['password_hash' => $value]
+        );
     }
 
     // Relationships

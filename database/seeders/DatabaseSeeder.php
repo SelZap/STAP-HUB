@@ -10,7 +10,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Disable FK checks so truncate works cleanly across all seeders
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::statement('PRAGMA foreign_keys = OFF;');
 
         $this->call([
             AdminSeeder::class,
@@ -24,6 +24,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Re-enable FK checks after all seeders finish
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        DB::statement('PRAGMA foreign_keys = ON;');
     }
 }

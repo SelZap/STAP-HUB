@@ -27,14 +27,14 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'admin_name' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $credentials = $request->only('email', 'password');
+        $credentials = $request->only('admin_name', 'password');
 
         try {
-            if (! $token = JWTAuth::attempt($credentials)) {
+            if (! $token = Auth::guard('admin')->attempt($credentials)) {
                 return response()->json(['message' => 'Invalid credentials.'], 401);
             }
         } catch (JWTException $e) {
@@ -44,19 +44,20 @@ class AuthController extends Controller
         $admin = Auth::guard('admin')->user();
 
         AdminActivityLog::create([
-            'admin_id' => $admin->id,
+            'admin_id' => $admin->admin_id,
             'action'   => 'admin_login',
         ]);
 
         return response()->json([
             'token' => $token,
             'admin' => [
-                'id'           => $admin->id,
+                'id'           => $admin->admin_id,
                 'name'         => $admin->name,
+                'admin_name'   => $admin->name,
                 'email'        => $admin->email,
                 'is_superuser' => $admin->is_superuser,
             ],
-        ]);
+        ])->cookie('admin_token', $token, 60) ; 
     }
 
     /**
@@ -80,18 +81,19 @@ class AuthController extends Controller
         $admin = Auth::guard('admin')->user();
 
         try {
-            JWTAuth::invalidate(JWTAuth::getToken());
+            Auth::guard('admin')->logout();
         } catch (JWTException $e) {
             // Token already invalid — proceed
         }
 
         if ($admin) {
             AdminActivityLog::create([
-                'admin_id' => $admin->id,
+                'admin_id' => $admin->admin_id,
                 'action'   => 'admin_logout',
             ]);
         }
 
-        return response()->json(['message' => 'Logged out successfully.']);
+        return response()->json(['message' => 'Logged out successfully.'])
+          ->withoutCookie('admin_token');
     }
 }

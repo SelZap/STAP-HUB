@@ -31,6 +31,9 @@ Route::get('/', [LandingController::class, 'index'])
 Route::get('/live', [LiveFeedController::class, 'index'])
     ->name('public.live');
 
+Route::get('/live/cameras', [LiveFeedController::class, 'cameras'])
+    ->name('public.live.cameras');
+
 // Footage / Data Request
 Route::get('/data-request', [FootageRequestController::class, 'index'])
     ->name('public.request');
@@ -118,4 +121,12 @@ Route::prefix('admin')
         Route::get('/incident-reports/pending-count', [IncidentReportController::class, 'pendingCount'])
             ->name('incident-reports.pending-count');
 
+        // API Endpoints for AJAX calls
+        Route::get('/api/dashboard/summary',     [DashboardController::class,   'summary']);
+        Route::get('/api/cameras',               [CameraController::class,       'list']);
+        Route::get('/api/alerts',                [AlertController::class,        'list']);
+        Route::get('/api/traffic-logs',          [TrafficLogController::class,   'list']);
+        Route::get('/api/traffic-lights',        [TrafficLightController::class, 'list']);
+        Route::get('/api/requests',              [RequestController::class,      'list']);
+        Route::get('/api/requests/{request_id}', [RequestController::class,      'show']);
     });

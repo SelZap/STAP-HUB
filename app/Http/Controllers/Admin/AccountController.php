@@ -16,8 +16,13 @@ class AccountController extends Controller
      */
     public function index()
     {
-        $admins = Admin::select('id', 'name', 'email', 'is_superuser', 'created_at')->get();
+      if (request()->expectsJson()) {
+        $admins = Admin::select('id', 'name', 'email', 'is_superuser', 'created_at')
+        ->orderBy('admin_id')
+        ->get();
         return response()->json($admins);
+      }
+      return view ('admin.accounts');
     }
 
     /**
@@ -43,7 +48,7 @@ class AccountController extends Controller
         AdminActivityLog::create([
             'admin_id'  => Auth::guard('admin')->id(),
             'action'    => 'admin_account_created',
-            'target_id' => $admin->id,
+            'target_id' => $admin->admin_id,
             'notes'     => "Created account for {$admin->email}",
         ]);
 
@@ -78,7 +83,7 @@ class AccountController extends Controller
 
         $request->validate([
             'name'     => 'sometimes|string|max:255',
-            'email'    => "sometimes|email|unique:admins,email,{$admin->id}",
+            'email'    => "sometimes|email|unique:admins,email,{$admin->admin_id},admin_id",
             'password' => 'sometimes|string|min:8|confirmed',
         ]);
 
@@ -93,7 +98,7 @@ class AccountController extends Controller
         AdminActivityLog::create([
             'admin_id'  => $current->id,
             'action'    => $action,
-            'target_id' => $admin->id,
+            'target_id' => $admin->admin_id,
         ]);
 
         return response()->json(['message' => 'Account updated.', 'admin' => $admin]);
@@ -119,7 +124,7 @@ class AccountController extends Controller
         AdminActivityLog::create([
             'admin_id'  => $current->id,
             'action'    => 'admin_account_deleted',
-            'target_id' => $id,
+            'target_id' => $admin->admin_id,
             'notes'     => "Deleted account: {$email}",
         ]);
 

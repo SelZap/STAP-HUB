@@ -20,11 +20,13 @@ class AuthenticateAdmin
     public function handle(Request $request, Closure $next)
     {
         try {
-            $admin = JWTAuth::parseToken()->authenticate();
+            $token = JWTAuth::getToken() ?: $request->cookie('admin_token');
 
-            if (! $admin) {
+            if (! $token) {
                 return $this->unauthenticated($request, 'Admin not found.');
             }
+
+            $admin = JWTAuth::setToken($token)->authenticate();
 
         } catch (TokenExpiredException $e) {
             return $this->unauthenticated($request, 'Token has expired.');
@@ -43,6 +45,6 @@ class AuthenticateAdmin
             return response()->json(['message' => $message], 401);
         }
 
-        return redirect()->route('admin.login')->with('error', $message);
+        return redirect()->route('public.dashboard')->with('error', $message);
     }
 }

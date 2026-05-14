@@ -65,12 +65,17 @@ class IncidentReportController extends Controller
     }
 
     // ADMIN — List all reports
-    public function index()
+    public function index(Request $request)
     {
         $reports = IncidentReport::with('reviewer')
-            ->orderByRaw("FIELD(status, 'pending', 'reviewed')")
+            ->orderByRaw("CASE status WHEN 'pending' THEN 1 WHEN 'reviewed' THEN 2 ELSE 3 END") // Pending first, then reviewed, then any other status (works on mysql and sqlite)
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // check if the request wants JSON (for AJAX) or HTML (for initial page load)
+        if($request->expectsJson() || $request->wantsJson()) {
+            return response()->json($reports);
+        }
 
         $pendingCount = IncidentReport::pending()->count();
 
