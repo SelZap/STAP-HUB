@@ -11,13 +11,31 @@ use Illuminate\Support\Facades\Validator;
 
 class IncidentReportController extends Controller
 {
-    // PUBLIC — Show form
+    // PUBLIC — show form
     public function create()
     {
         return view('public.incident-report');
     }
 
-    // PUBLIC — Handle submission
+    // PUBLIC — validate email domain via AJAX (called on blur)
+    public function validateEmail(Request $request)
+    {
+        $email = trim($request->input('email', ''));
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['valid' => false, 'message' => 'Invalid email format.']);
+        }
+
+        $domain = substr(strrchr($email, '@'), 1);
+        $exists = checkdnsrr($domain, 'MX') || checkdnsrr($domain, 'A');
+
+        return response()->json([
+            'valid'   => $exists,
+            'message' => $exists ? '' : 'This email domain does not appear to exist.',
+        ]);
+    }
+
+    // PUBLIC — handle submission
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -25,20 +43,18 @@ class IncidentReportController extends Controller
             'incident_time'           => 'required|date_format:H:i',
             'environmental_condition' => 'required|in:clear,cloudy,rainy,foggy,night',
             'location_description'    => 'required|string|max:500',
-            'vehicle_type'            => 'nullable|in:car,truck,motorcycle,bus,mini_bus,tricycle,jeepney,ambulance,fire_truck,emergency_vehicle',
+            'vehicle_type'            => 'nullable|array',
+            'vehicle_type.*'          => 'in:car,truck,motorcycle,bus,mini_bus,tricycle,jeepney,ambulance,fire_truck,emergency_vehicle',
             'vehicle_count'           => 'nullable|integer|min:1|max:255',
             'people_hurt'             => 'required|boolean',
             'injured_count'           => 'nullable|integer|min:1|max:255|required_if:people_hurt,1',
             'description'             => 'required|string|min:20',
             'reporting_party_name'    => 'required|string|max:255',
-            'reporter_email'          => 'required|email|max:255',
+            'reporter_email'          => 'nullable|email|max:255',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors'  => $validator->errors(),
-            ], 422);
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
         $report = IncidentReport::create([
@@ -46,61 +62,58 @@ class IncidentReportController extends Controller
             'incident_time'           => $request->incident_time,
             'environmental_condition' => $request->environmental_condition,
             'location_description'    => $request->location_description,
-            'vehicle_type'            => $request->vehicle_type,
+            'vehicle_type'            => $request->vehicle_type ? implode(',', $request->vehicle_type) : null,
             'vehicle_count'           => $request->vehicle_count,
             'people_hurt'             => $request->people_hurt,
             'injured_count'           => $request->people_hurt ? $request->injured_count : null,
             'description'             => $request->description,
             'reporting_party_name'    => $request->reporting_party_name,
-            'reporter_email'          => $request->reporter_email,
+            'reporter_email'          => $request->reporter_email ?: null,
             'status'                  => 'pending',
         ]);
 
-        Mail::to($report->reporter_email)->send(new IncidentReportReceived($report));
+        $emailSent = false;
+        if ($report->reporter_email) {
+            Mail::to($report->reporter_email)->send(new IncidentReportReceived($report));
+            $emailSent = true;
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Your incident report has been submitted successfully. Please check your email for confirmation.',
+            'success'    => true,
+            'email_sent' => $emailSent,
+            'message'    => $emailSent
+                ? "Your report has been submitted. A confirmation has been sent to {$report->reporter_email}."
+                : 'Your report has been submitted successfully.',
         ]);
     }
 
-    // ADMIN — List all reports
+    // ADMIN — list all reports
     public function index(Request $request)
     {
         $reports = IncidentReport::with('reviewer')
-            ->orderByRaw("CASE status WHEN 'pending' THEN 1 WHEN 'reviewed' THEN 2 ELSE 3 END") // Pending first, then reviewed, then any other status (works on mysql and sqlite)
+            ->orderByRaw("CASE status WHEN 'pending' THEN 1 WHEN 'reviewed' THEN 2 ELSE 3 END")
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // check if the request wants JSON (for AJAX) or HTML (for initial page load)
-        if($request->expectsJson() || $request->wantsJson()) {
+        if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json($reports);
         }
 
         $pendingCount = IncidentReport::pending()->count();
-
         return view('admin.incident-reports', compact('reports', 'pendingCount'));
     }
 
-    // ADMIN — Mark as reviewed
+    // ADMIN — mark as reviewed
     public function markReviewed(Request $request, $id)
     {
         $report = IncidentReport::findOrFail($id);
 
         if ($report->status === 'reviewed') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Report is already marked as reviewed.',
-            ], 409);
+            return response()->json(['success' => false, 'message' => 'Report is already marked as reviewed.'], 409);
         }
 
         $admin = auth('admin')->user();
-
-        $report->update([
-            'status'      => 'reviewed',
-            'reviewed_by' => $admin->admin_id,
-            'reviewed_at' => now(),
-        ]);
+        $report->update(['status' => 'reviewed', 'reviewed_by' => $admin->admin_id, 'reviewed_at' => now()]);
 
         AdminActivityLog::create([
             'admin_id'     => $admin->admin_id,
@@ -117,11 +130,39 @@ class IncidentReportController extends Controller
         ]);
     }
 
-    // ADMIN — Pending count for dashboard banner
+    // ADMIN — send email to reporter
+    public function sendEmail(Request $request, $id)
+    {
+        $request->validate([
+            'subject' => 'required|string|max:255',
+            'body'    => 'required|string',
+        ]);
+
+        $report = IncidentReport::findOrFail($id);
+
+        if (!$report->reporter_email) {
+            return response()->json(['success' => false, 'message' => 'This report has no email address on file.'], 422);
+        }
+
+        Mail::raw($request->body, function ($m) use ($report, $request) {
+            $m->to($report->reporter_email)->subject($request->subject);
+        });
+
+        $admin = auth('admin')->user();
+        AdminActivityLog::create([
+            'admin_id'     => $admin->admin_id,
+            'target_type'  => 'incident_report',
+            'target_id'    => $report->incident_id,
+            'target_label' => 'Incident Report #' . $report->incident_id,
+            'details'      => 'Sent email to ' . $report->reporter_email,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Email sent successfully.']);
+    }
+
+    // ADMIN — pending count for dashboard
     public function pendingCount()
     {
-        return response()->json([
-            'pendingCount' => IncidentReport::pending()->count(),
-        ]);
+        return response()->json(['pendingCount' => IncidentReport::pending()->count()]);
     }
 }

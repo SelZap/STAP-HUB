@@ -11,23 +11,19 @@ use Illuminate\Support\Facades\Hash;
 
 class AccountController extends Controller
 {
-    /**
-     * List all admin accounts. (Superuser only)
-     */
+    // List all admin accounts (superuser only)
     public function index()
     {
-      if (request()->expectsJson()) {
-        $admins = Admin::select('id', 'name', 'email', 'is_superuser', 'created_at')
-        ->orderBy('admin_id')
-        ->get();
-        return response()->json($admins);
-      }
-      return view ('admin.accounts');
+        if (request()->expectsJson()) {
+            $admins = Admin::select('admin_id', 'admin_name', 'email', 'is_superuser', 'created_at')
+                ->orderBy('admin_id')
+                ->get();
+            return response()->json($admins);
+        }
+        return view('admin.accounts');
     }
 
-    /**
-     * Create a new admin account. (Superuser only)
-     */
+    // Create a new admin account (superuser only)
     public function store(Request $request)
     {
         $this->authorizeSuperuser();
@@ -39,14 +35,14 @@ class AccountController extends Controller
         ]);
 
         $admin = Admin::create([
-            'name'         => $request->name,
-            'email'        => $request->email,
-            'password'     => Hash::make($request->password),
-            'is_superuser' => false,
+            'admin_name'    => $request->name,
+            'email'         => $request->email,
+            'password_hash' => Hash::make($request->password),
+            'is_superuser'  => false,
         ]);
 
         AdminActivityLog::create([
-            'admin_id'  => Auth::guard('admin')->id(),
+            'admin_id'  => Auth::guard('admin')->user()->admin_id,
             'action'    => 'admin_account_created',
             'target_id' => $admin->admin_id,
             'notes'     => "Created account for {$admin->email}",
@@ -55,27 +51,19 @@ class AccountController extends Controller
         return response()->json(['message' => 'Admin account created.', 'admin' => $admin], 201);
     }
 
-    /**
-     * Show a single admin account. (Superuser only)
-     */
+    // Show single admin account (superuser only)
     public function show($id)
     {
         $this->authorizeSuperuser();
-
-        $admin = Admin::findOrFail($id);
-        return response()->json($admin);
+        return response()->json(Admin::findOrFail($id));
     }
 
-    /**
-     * Update an admin account.
-     * Superusers can update any account.
-     * Regular admins can only update their own account.
-     */
+    // Update admin account (superuser = any; regular admin = own only)
     public function update(Request $request, $id)
     {
         $current = Auth::guard('admin')->user();
 
-        if (! $current->is_superuser && $current->id != $id) {
+        if (!$current->is_superuser && $current->admin_id != $id) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
@@ -87,16 +75,16 @@ class AccountController extends Controller
             'password' => 'sometimes|string|min:8|confirmed',
         ]);
 
-        if ($request->filled('name'))     $admin->name  = $request->name;
-        if ($request->filled('email'))    $admin->email = $request->email;
-        if ($request->filled('password')) $admin->password = Hash::make($request->password);
+        if ($request->filled('name'))     $admin->admin_name    = $request->name;
+        if ($request->filled('email'))    $admin->email         = $request->email;
+        if ($request->filled('password')) $admin->password_hash = Hash::make($request->password);
 
         $admin->save();
 
-        $action = ($current->id === $admin->id) ? 'own_account_edited' : 'admin_account_edited';
+        $action = ($current->admin_id === $admin->admin_id) ? 'own_account_edited' : 'admin_account_edited';
 
         AdminActivityLog::create([
-            'admin_id'  => $current->id,
+            'admin_id'  => $current->admin_id,
             'action'    => $action,
             'target_id' => $admin->admin_id,
         ]);
@@ -104,16 +92,14 @@ class AccountController extends Controller
         return response()->json(['message' => 'Account updated.', 'admin' => $admin]);
     }
 
-    /**
-     * Delete an admin account. (Superuser only)
-     */
+    // Delete admin account (superuser only)
     public function destroy($id)
     {
         $this->authorizeSuperuser();
 
         $current = Auth::guard('admin')->user();
 
-        if ($current->id == $id) {
+        if ($current->admin_id == $id) {
             return response()->json(['message' => 'You cannot delete your own account.'], 422);
         }
 
@@ -122,21 +108,18 @@ class AccountController extends Controller
         $admin->delete();
 
         AdminActivityLog::create([
-            'admin_id'  => $current->id,
+            'admin_id'  => $current->admin_id,
             'action'    => 'admin_account_deleted',
-            'target_id' => $admin->admin_id,
+            'target_id' => $id,
             'notes'     => "Deleted account: {$email}",
         ]);
 
         return response()->json(['message' => 'Admin account deleted.']);
     }
 
-    /**
-     * Helper: Abort if current admin is not a superuser.
-     */
     private function authorizeSuperuser()
     {
-        if (! Auth::guard('admin')->user()->is_superuser) {
+        if (!Auth::guard('admin')->user()->is_superuser) {
             abort(403, 'Superuser access required.');
         }
     }

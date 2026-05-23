@@ -80,6 +80,14 @@
             <span class="stap-nav-label">Incident Reports</span>
         </a>
 
+        <a href="{{ route('admin.announcements') }}"
+           class="stap-nav-item {{ request()->routeIs('admin.announcements*') ? 'active' : '' }}">
+            <svg class="stap-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            <span class="stap-nav-label">Announcements</span>
+        </a>
+
         <div id="accountsNavItem" style="display:none;">
             <a href="{{ route('admin.accounts') }}"
                class="stap-nav-item {{ request()->routeIs('admin.accounts*') ? 'active' : '' }}">
@@ -94,17 +102,6 @@
         </div>
 
     </nav>
-
-    <div class="stap-sidebar-bottom">
-        <a href="/" class="stap-admin-login-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            <span class="stap-nav-label">Back to Public Site</span>
-        </a>
-    </div>
 
 </aside>
 

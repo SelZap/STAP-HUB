@@ -55,10 +55,11 @@ let editingId = null;
 
 async function loadAccounts() {
     try {
-        const res  = await fetch('/admin/accounts', { headers: authHeaders() });
-        const data = await res.json();
+        const res      = await fetch('/admin/accounts', { headers: authHeaders() });
+        const data     = await res.json();
         const accounts = data.data ?? data;
-        const me = JSON.parse(sessionStorage.getItem('admin_data') || '{}');
+        const me       = JSON.parse(sessionStorage.getItem('admin_data') || '{}');
+        const myId     = me.admin_id ?? me.id;
 
         document.getElementById('accountCount').textContent = `${accounts.length} admin account(s)`;
 
@@ -68,49 +69,49 @@ async function loadAccounts() {
             return;
         }
 
-        list.innerHTML = accounts.map(a => `
+        list.innerHTML = accounts.map(a => {
+            const aId   = a.admin_id ?? a.id;
+            const aName = a.admin_name ?? a.name ?? '—';
+            return `
             <div class="stap-card stap-mb-1" style="padding:14px 18px;display:flex;align-items:center;gap:14px;">
                 <div style="width:38px;height:38px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">
                     👤
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
-                        <span style="font-weight:700;font-size:13px;">${a.admin_name ?? a.name ?? '—'}</span>
+                        <span style="font-weight:700;font-size:13px;">${aName}</span>
                         ${a.is_superuser ? '<span style="font-size:10px;font-weight:700;color:var(--navy);background:var(--navy-light);padding:2px 8px;border-radius:20px;">SUPERUSER</span>' : ''}
-                        ${(a.admin_id ?? a.id) == me.id ? '<span style="font-size:10px;color:var(--text-muted);">(you)</span>' : ''}
+                        ${aId == myId ? '<span style="font-size:10px;color:var(--text-muted);">(you)</span>' : ''}
                     </div>
                     <div class="stap-text-xs stap-muted">${a.email ?? '—'}</div>
                 </div>
                 <div style="display:flex;gap:8px;flex-shrink:0;">
-                    <button onclick="openEditModal(${a.admin_id ?? a.id},'${a.admin_name ?? a.name ?? ''}','${a.email ?? ''}')" class="stap-btn-primary" style="padding:6px 12px;font-size:11px;background:var(--navy-muted);">Edit</button>
-                    ${(a.admin_id ?? a.id) != me.id ? `<button onclick="deleteAccount(${a.admin_id ?? a.id})" class="stap-btn-primary" style="padding:6px 12px;font-size:11px;background:var(--red);">Delete</button>` : ''}
+                    <button onclick="openEditModal(${aId},'${aName.replace(/'/g,"\\'")}','${a.email ?? ''}')" class="stap-btn-primary" style="padding:6px 12px;font-size:11px;background:var(--navy-muted);">Edit</button>
+                    ${aId != myId ? `<button onclick="deleteAccount(${aId})" class="stap-btn-primary" style="padding:6px 12px;font-size:11px;background:var(--red);">Delete</button>` : ''}
                 </div>
-            </div>`
-        ).join('');
+            </div>`;
+        }).join('');
     } catch(e) { console.error(e); }
 }
 
 function openCreateModal() {
     editingId = null;
-    document.getElementById('modalTitle').textContent = 'New Admin Account';
-    document.getElementById('modalBtnText').textContent = 'Create Account';
-    document.getElementById('fieldName').value = '';
-    document.getElementById('fieldEmail').value = '';
-    document.getElementById('fieldPassword').value = '';
-    document.getElementById('fieldPasswordConfirm').value = '';
+    document.getElementById('modalTitle').textContent    = 'New Admin Account';
+    document.getElementById('modalBtnText').textContent  = 'Create Account';
+    ['fieldName','fieldEmail','fieldPassword','fieldPasswordConfirm'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('formError').style.display = 'none';
     document.getElementById('accountModal').classList.add('is-open');
 }
 
 function openEditModal(id, name, email) {
     editingId = id;
-    document.getElementById('modalTitle').textContent = 'Edit Admin Account';
-    document.getElementById('modalBtnText').textContent = 'Save Changes';
-    document.getElementById('fieldName').value = name;
-    document.getElementById('fieldEmail').value = email;
-    document.getElementById('fieldPassword').value = '';
+    document.getElementById('modalTitle').textContent    = 'Edit Admin Account';
+    document.getElementById('modalBtnText').textContent  = 'Save Changes';
+    document.getElementById('fieldName').value           = name;
+    document.getElementById('fieldEmail').value          = email;
+    document.getElementById('fieldPassword').value       = '';
     document.getElementById('fieldPasswordConfirm').value = '';
-    document.getElementById('formError').style.display = 'none';
+    document.getElementById('formError').style.display  = 'none';
     document.getElementById('accountModal').classList.add('is-open');
 }
 
@@ -126,9 +127,9 @@ async function submitModal() {
     err.style.display = 'none';
 
     const body = {
-        name: document.getElementById('fieldName').value,
-        email: document.getElementById('fieldEmail').value,
-        password: document.getElementById('fieldPassword').value,
+        name:                  document.getElementById('fieldName').value,
+        email:                 document.getElementById('fieldEmail').value,
+        password:              document.getElementById('fieldPassword').value,
         password_confirmation: document.getElementById('fieldPasswordConfirm').value,
     };
 
