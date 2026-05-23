@@ -13,13 +13,12 @@
     <p class="ir-intro">
         Use this form to report a traffic incident or accident around
         <strong>Mayor Gil Fernando Avenue / Sumulong Highway</strong>.
-        A confirmation email will be sent to you upon submission.
     </p>
 
     {{-- Success --}}
     <div class="ir-banner ir-banner-success" id="irSuccess" style="display:none;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Your report has been submitted. Please check your email for confirmation.
+        <span id="irSuccessMsg">Your report has been submitted successfully.</span>
     </div>
 
     {{-- Error --}}
@@ -160,15 +159,18 @@
             <div class="ir-grid-2">
                 <div class="stap-form-group">
                     <label class="stap-form-label" for="reporting_party_name">Name of Reporting Party <span class="ir-req">*</span></label>
-                    <input type="text" id="reporting_party_name" name="reporting_party_name"
+                    <input type="email" id="reporting_party_name" name="reporting_party_name"
                            class="stap-form-input" placeholder="Full name" required>
                     <span class="ir-err" id="err_reporting_party_name"></span>
                 </div>
                 <div class="stap-form-group">
-                    <label class="stap-form-label" for="reporter_email">Email Address <span class="ir-req">*</span></label>
+                    <label class="stap-form-label" for="reporter_email">
+                        Email Address <span class="ir-optional">(Optional)</span>
+                    </label>
                     <input type="email" id="reporter_email" name="reporter_email"
-                           class="stap-form-input" placeholder="your@email.com" required>
+                           class="stap-form-input" placeholder="your@email.com">
                     <span class="ir-err" id="err_reporter_email"></span>
+                    <span class="ir-muted" style="font-size:11px;margin-top:4px;display:block;">If provided, a confirmation will be sent to you.</span>
                 </div>
             </div>
         </div>
@@ -179,7 +181,6 @@
                 <span id="irBtnText">Submit Report</span>
                 <span id="irBtnSpinner" class="stap-spinner" style="display:none;"></span>
             </button>
-            <p class="ir-submit-note">A confirmation email will be sent to the address provided above.</p>
         </div>
 
     </form>
@@ -188,9 +189,9 @@
 @endsection
 
 @push('scripts')
-{{-- Pass the route URL into JS so it works from a static file --}}
 <script>
-    window.STAP_INCIDENT_ROUTE = '{{ route("incident.store") }}';
+    window.STAP_INCIDENT_ROUTE       = '{{ route("incident.store") }}';
+    window.STAP_EMAIL_VALIDATE_ROUTE = '{{ route("incident.validate-email") }}';
 </script>
 <script src="{{ asset('js/incident-report.js') }}"></script>
 @endpush

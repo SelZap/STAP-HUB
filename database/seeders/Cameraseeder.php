@@ -11,16 +11,17 @@ class CameraSeeder extends Seeder
 {
     public function run(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         DB::table('cameras')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $alphaId = StapNode::where('node_name', 'Node Alpha')->value('node_id');
         $betaId  = StapNode::where('node_name', 'Node Beta')->value('node_id');
 
-        // ── Node Alpha ────────────────────────────────────────────────
         Camera::create([
             'node_id'   => $alphaId,
             'usb_index' => 0,
-            'label'     => 'Alpha Cam 1',
+            'label'     => 'Mayor Gil Fernando Ave — Northbound',
             'direction' => 'Northbound',
             'status'    => 'active',
         ]);
@@ -28,24 +29,15 @@ class CameraSeeder extends Seeder
         Camera::create([
             'node_id'   => $alphaId,
             'usb_index' => 1,
-            'label'     => 'Alpha Cam 2',
+            'label'     => 'Mayor Gil Fernando Ave — Southbound',
             'direction' => 'Southbound',
             'status'    => 'active',
         ]);
 
         Camera::create([
-            'node_id'   => $alphaId,
-            'usb_index' => 2,
-            'label'     => 'Alpha Cam 3',
-            'direction' => 'Intersection — Batasan Road',
-            'status'    => 'inactive',
-        ]);
-
-        // ── Node Beta ─────────────────────────────────────────────────
-        Camera::create([
             'node_id'   => $betaId,
             'usb_index' => 0,
-            'label'     => 'Beta Cam 1',
+            'label'     => 'Sumulong Highway — Eastbound',
             'direction' => 'Eastbound',
             'status'    => 'active',
         ]);
@@ -53,7 +45,7 @@ class CameraSeeder extends Seeder
         Camera::create([
             'node_id'   => $betaId,
             'usb_index' => 1,
-            'label'     => 'Beta Cam 2',
+            'label'     => 'Sumulong Highway — Westbound',
             'direction' => 'Westbound',
             'status'    => 'active',
         ]);

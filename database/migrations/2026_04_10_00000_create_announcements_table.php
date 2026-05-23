@@ -6,16 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
+public function up(): void
 {
+    Schema::dropIfExists('announcements');
     Schema::create('announcements', function (Blueprint $table) {
         $table->unsignedInteger('announcement_id')->autoIncrement();
         
-        // Must match admins.admin_id → unsignedInteger
+        // unsignedInteger → matches admins.admin_id
         $table->unsignedInteger('created_by');
         $table->foreign('created_by')->references('admin_id')->on('admins')->onDelete('cascade');
         
-        // Must match incident_reports.incident_id → unsignedBigInteger
+        // unsignedBigInteger → matches incident_reports.incident_id (bigIncrements)
         $table->unsignedBigInteger('incident_report_id')->nullable();
         $table->foreign('incident_report_id')->references('incident_id')->on('incident_reports')->nullOnDelete();
         
@@ -30,6 +31,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('incident_reports');
+        Schema::dropIfExists('announcements');
     }
 };

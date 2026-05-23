@@ -17,7 +17,6 @@
     @stack('styles')
 
     <style>
-        /* ── Admin Panel Badge ── */
         .stap-admin-panel-badge {
             display: inline-flex;
             align-items: center;
@@ -42,10 +41,8 @@
         }
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
+            50%       { opacity: 0.5; transform: scale(0.8); }
         }
-
-        /* ── Welcome toast ── */
         .stap-welcome-toast {
             position: fixed;
             bottom: 28px;
@@ -65,26 +62,15 @@
             opacity: 0;
             transition: transform 0.4s cubic-bezier(.22,1,.36,1), opacity 0.4s ease;
         }
-        .stap-welcome-toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .stap-welcome-toast .toast-icon {
-            font-size: 18px;
-        }
-        .stap-welcome-toast .toast-sub {
-            font-size: 11px;
-            font-weight: 400;
-            opacity: 0.7;
-            margin-top: 2px;
-        }
+        .stap-welcome-toast.show { transform: translateY(0); opacity: 1; }
+        .stap-welcome-toast .toast-icon { font-size: 18px; }
+        .stap-welcome-toast .toast-sub  { font-size: 11px; font-weight: 400; opacity: 0.7; margin-top: 2px; }
     </style>
 </head>
 <body>
 
 <div class="stap-wrapper">
 
-    {{-- Admin Sidebar --}}
     @include('partials.admin-sidebar')
 
     <div class="stap-main">
@@ -92,13 +78,17 @@
         <div class="stap-topbar">
             <div class="stap-topbar-left" style="display:flex;align-items:center;gap:12px;">
                 <h1 class="stap-page-title">@yield('page-title', 'Dashboard')</h1>
-                {{-- Admin Panel Badge --}}
                 <span class="stap-admin-panel-badge">Admin Panel</span>
             </div>
-            <div class="stap-topbar-right" style="display:flex;align-items:center;gap:16px;">
-                {{-- Welcome message --}}
+            <div class="stap-topbar-right" style="display:flex;align-items:center;gap:12px;">
                 <span id="adminNameBadge" style="font-size:12px;font-weight:600;color:var(--text-secondary);"></span>
                 <span class="stap-date">{{ \Carbon\Carbon::now()->format('F d, Y') }}</span>
+
+                <a href="{{ url('/') }}" target="_blank" class="stap-btn-primary"
+                   style="padding:7px 14px;font-size:11px;letter-spacing:0.5px;background:var(--navy-muted);text-decoration:none;">
+                    ← PUBLIC SIDE
+                </a>
+
                 <button id="adminLogoutBtn" class="stap-btn-primary" style="padding:7px 14px;font-size:11px;letter-spacing:0.5px;">
                     LOG OUT
                 </button>
@@ -112,7 +102,6 @@
     </div>
 </div>
 
-{{-- Welcome Toast --}}
 <div class="stap-welcome-toast" id="welcomeToast">
     <span class="toast-icon">👋</span>
     <div>
@@ -123,22 +112,16 @@
 
 <script src="{{ asset('js/app.js') }}"></script>
 <script>
-    // Auth guard — redirect to home if no token
     const adminToken = sessionStorage.getItem('admin_token');
     if (!adminToken) window.location.href = '/';
 
     const adminData = JSON.parse(sessionStorage.getItem('admin_data') || '{}');
 
-    // ── Tab title prefix ──
-    document.title = '{{ addslashes(View::yieldContent("title", "Dashboard")) }} — STAP Hub Admin Panel';
-
-    // ── Topbar name badge ──
     const badge = document.getElementById('adminNameBadge');
     if (badge && adminData.name) {
         badge.textContent = '👤 ' + adminData.name + (adminData.is_superuser ? ' · Superuser' : '');
     }
 
-    // ── Welcome toast (only show once per session) ──
     const toastShown = sessionStorage.getItem('stap_toast_shown');
     if (!toastShown && adminData.name) {
         const toast = document.getElementById('welcomeToast');
@@ -148,7 +131,6 @@
         sessionStorage.setItem('stap_toast_shown', '1');
     }
 
-    // ── Logout ──
     document.getElementById('adminLogoutBtn')?.addEventListener('click', async () => {
         try {
             await fetch('/admin/logout', {
@@ -157,6 +139,7 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     'Authorization': 'Bearer ' + adminToken,
                     'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                 }
             });
         } catch(e) {}
@@ -166,12 +149,19 @@
         window.location.href = '/';
     });
 
+    /**
+     * Base headers for all admin fetch() calls.
+     * NOTE: Content-Type is intentionally omitted here.
+     * - For JSON bodies: add 'Content-Type': 'application/json' manually at the call site.
+     * - For FormData bodies: never set Content-Type — the browser sets multipart/form-data
+     *   with the correct boundary automatically. Setting it manually breaks file uploads.
+     */
     function authHeaders() {
         return {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Authorization': 'Bearer ' + sessionStorage.getItem('admin_token'),
+            'Accept':            'application/json',
+            'X-Requested-With':  'XMLHttpRequest',
+            'X-CSRF-TOKEN':      document.querySelector('meta[name="csrf-token"]').content,
+            'Authorization':     'Bearer ' + (sessionStorage.getItem('admin_token') ?? ''),
         };
     }
 </script>

@@ -20,6 +20,88 @@
 
     {{-- Page-specific styles --}}
     @stack('styles')
+
+    <style>
+        /* ── Announcement Notification Stack ── */
+        #stap-ann-stack {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+            width: 340px;
+            max-width: calc(100vw - 48px);
+            pointer-events: none;
+        }
+
+        .stap-ann-card {
+            pointer-events: all;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 14px 14px 14px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.5;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            animation: stap-ann-in 0.25s ease;
+            position: relative;
+        }
+
+        @keyframes stap-ann-in {
+            from { opacity: 0; transform: translateX(24px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .stap-ann-card.dismissing {
+            animation: stap-ann-out 0.2s ease forwards;
+        }
+
+        @keyframes stap-ann-out {
+            to { opacity: 0; transform: translateX(32px); }
+        }
+
+        .stap-ann-card.type-general     { background: #1b2744; color: #fff; }
+        .stap-ann-card.type-incident    { background: #7f1d1d; color: #fff; }
+        .stap-ann-card.type-weather     { background: #1e3a8a; color: #fff; }
+        .stap-ann-card.type-maintenance { background: #4c1d95; color: #fff; }
+        .stap-ann-card.type-emergency   { background: #c2410c; color: #fff; }
+
+        /* Accent left border per type */
+        .stap-ann-card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 4px;
+            border-radius: 10px 0 0 10px;
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        .stap-ann-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+        .stap-ann-body  { flex: 1; min-width: 0; }
+        .stap-ann-title { display: block; font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+        .stap-ann-msg   { display: block; opacity: 0.88; font-size: 12.5px; }
+        .stap-ann-meta  { display: block; font-size: 11px; opacity: 0.55; margin-top: 5px; }
+
+        .stap-ann-close {
+            background: rgba(255, 255, 255, 0.12);
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1;
+            padding: 4px 6px;
+            border-radius: 5px;
+            flex-shrink: 0;
+            align-self: flex-start;
+            transition: background 0.15s;
+        }
+        .stap-ann-close:hover { background: rgba(255, 255, 255, 0.25); }
+    </style>
 </head>
 <body>
 
@@ -49,11 +131,88 @@
     </div>
 </div>
 
+{{-- ── Floating Announcement Stack ── --}}
+<div id="stap-ann-stack"></div>
+
 {{-- Admin Login Modal --}}
 @include('partials.admin-login-modal')
 
 {{-- App JS --}}
 <script src="{{ asset('js/app.js') }}"></script>
+
+{{-- ── Announcement Stack Script ── --}}
+<script>
+(function () {
+    const typeIcons = {
+        general:     '📢',
+        incident:    '🚨',
+        weather:     '🌧️',
+        maintenance: '🔧',
+        emergency:   '⚠️',
+    };
+
+    const dismissed = JSON.parse(sessionStorage.getItem('stap_dismissed_ann') || '[]');
+    const stack = document.getElementById('stap-ann-stack');
+
+    function renderCard(a) {
+        const icon    = typeIcons[a.type] ?? '📢';
+        const expires = a.expires_at
+            ? 'Expires ' + new Date(a.expires_at).toLocaleString()
+            : '';
+        const incident = a.incident_report
+            ? `Incident #${a.incident_report.incident_id}`
+            : '';
+        const meta = [expires, incident].filter(Boolean).join(' · ');
+
+        const card = document.createElement('div');
+        card.className = `stap-ann-card type-${a.type}`;
+        card.id = `ann-${a.announcement_id}`;
+        card.innerHTML = `
+            <span class="stap-ann-icon">${icon}</span>
+            <div class="stap-ann-body">
+                <span class="stap-ann-title">${a.title}</span>
+                <span class="stap-ann-msg">${a.content}</span>
+                ${meta ? `<span class="stap-ann-meta">${meta}</span>` : ''}
+            </div>
+            <button class="stap-ann-close" title="Dismiss">✕</button>
+        `;
+
+        card.querySelector('.stap-ann-close').addEventListener('click', () => dismissAnnouncement(a.announcement_id));
+        return card;
+    }
+
+    async function loadAnnouncements() {
+        try {
+            const res = await fetch('/api/announcements/active', {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!res.ok) return;
+
+            const announcements = await res.json();
+            const visible = announcements.filter(a => !dismissed.includes(a.announcement_id));
+
+            stack.innerHTML = '';
+            visible.forEach(a => stack.appendChild(renderCard(a)));
+
+        } catch (e) {
+            console.error('Failed to load announcements', e);
+        }
+    }
+
+    window.dismissAnnouncement = function (id) {
+        dismissed.push(id);
+        sessionStorage.setItem('stap_dismissed_ann', JSON.stringify(dismissed));
+
+        const card = document.getElementById('ann-' + id);
+        if (!card) return;
+
+        card.classList.add('dismissing');
+        card.addEventListener('animationend', () => card.remove(), { once: true });
+    };
+
+    loadAnnouncements();
+})();
+</script>
 
 {{-- Page-specific scripts --}}
 @stack('scripts')

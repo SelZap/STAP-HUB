@@ -5,141 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Incident Report Received</title>
     <style>
-        body {
-            font-family: 'Inter', Arial, sans-serif;
-            background-color: #f4f6fb;
-            margin: 0;
-            padding: 0;
-            color: #1B2744;
-        }
-        .wrapper {
-            max-width: 600px;
-            margin: 40px auto;
-            background: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 24px rgba(27,39,68,0.08);
-        }
-        .header {
-            background-color: #1B2744;
-            padding: 32px 40px;
-            text-align: center;
-        }
-        .header h1 {
-            color: #ffffff;
-            font-size: 22px;
-            margin: 0;
-            letter-spacing: 0.5px;
-        }
-        .header span {
-            color: #29B357;
-            font-weight: 700;
-        }
-        .body {
-            padding: 36px 40px;
-        }
-        .body p {
-            font-size: 15px;
-            line-height: 1.7;
-            margin: 0 0 16px;
-            color: #374151;
-        }
-        .highlight-box {
-            background: #f0fdf4;
-            border-left: 4px solid #29B357;
-            border-radius: 6px;
-            padding: 16px 20px;
-            margin: 24px 0;
-        }
-        .highlight-box p {
-            margin: 0;
-            font-size: 14px;
-            color: #1B2744;
-        }
-        .details-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 24px 0;
-            font-size: 14px;
-        }
-        .details-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .details-table td:first-child {
-            font-weight: 600;
-            color: #1B2744;
-            width: 40%;
-        }
-        .details-table td:last-child {
-            color: #374151;
-        }
-        .footer {
-            background: #f4f6fb;
-            padding: 24px 40px;
-            text-align: center;
-            font-size: 12px;
-            color: #9ca3af;
-        }
-        .footer strong {
-            color: #1B2744;
-        }
+        body { margin: 0; padding: 0; background: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; }
+        .wrap { max-width: 580px; margin: 32px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,23,42,.10); }
+        .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); padding: 32px 36px; }
+        .header-title { color: #fff; font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+        .header-sub { color: rgba(255,255,255,.7); font-size: 13px; margin: 0; }
+        .body { padding: 32px 36px; }
+        .greeting { font-size: 15px; margin-bottom: 16px; line-height: 1.6; }
+        .section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #64748b; margin-bottom: 12px; margin-top: 24px; }
+        .detail-grid { display: table; width: 100%; border-collapse: collapse; }
+        .detail-row { display: table-row; }
+        .detail-label { display: table-cell; font-size: 12px; color: #64748b; padding: 7px 12px 7px 0; width: 38%; vertical-align: top; }
+        .detail-value { display: table-cell; font-size: 13px; font-weight: 600; color: #0f172a; padding: 7px 0; border-bottom: 1px solid #f1f5f9; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .note { background: #f8fafc; border-left: 3px solid #0f172a; border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 13px; line-height: 1.6; color: #475569; margin-top: 24px; }
+        .footer { background: #f8fafc; padding: 20px 36px; border-top: 1px solid #e2e8f0; text-align: center; }
+        .footer p { font-size: 11px; color: #94a3b8; margin: 4px 0; }
     </style>
 </head>
 <body>
-    <div class="wrapper">
-        <div class="header">
-            <h1>STAP <span>Hub</span></h1>
-        </div>
+<div class="wrap">
+    <div class="header">
+        <p class="header-title">STAP Hub</p>
+        <p class="header-sub">Smart Traffic Automation Program — Marikina City</p>
+    </div>
+    <div class="body">
+        <p class="greeting">
+            Dear <strong>{{ $report->reporting_party_name }}</strong>,<br>
+            We have received your incident report. Here is a summary of the information you submitted.
+        </p>
 
-        <div class="body">
-            <p>Dear <strong>{{ $report->reporting_party_name }}</strong>,</p>
-
-            <p>Thank you for your report! We will be sure to respond as soon as possible to your report.</p>
-
-            <div class="highlight-box">
-                <p>Your incident report has been successfully received and is currently under review by our traffic management team.</p>
+        <div class="section-title">Report Details</div>
+        <div class="detail-grid">
+            <div class="detail-row">
+                <div class="detail-label">Reference No.</div>
+                <div class="detail-value">#{{ str_pad($report->incident_id, 5, '0', STR_PAD_LEFT) }}</div>
             </div>
-
-            <p>Here is a summary of what you submitted:</p>
-
-            <table class="details-table">
-                <tr>
-                    <td>Report Reference</td>
-                    <td>#{{ $report->incident_id }}</td>
-                </tr>
-                <tr>
-                    <td>Incident Date</td>
-                    <td>{{ \Carbon\Carbon::parse($report->incident_date)->format('F d, Y') }}</td>
-                </tr>
-                <tr>
-                    <td>Incident Time</td>
-                    <td>{{ \Carbon\Carbon::parse($report->incident_time)->format('h:i A') }}</td>
-                </tr>
-                <tr>
-                    <td>Location</td>
-                    <td>{{ $report->location_description }}</td>
-                </tr>
-                <tr>
-                    <td>Submitted By</td>
-                    <td>{{ $report->reporting_party_name }}</td>
-                </tr>
-            </table>
-
-            <p>If you have additional information to add or have any questions, please do not hesitate to reach out to us.</p>
-
-            <p>Thank you for helping us keep the community safe.</p>
-
-            <p>
-                Regards,<br>
-                <strong>STAP Hub Traffic Management Team</strong>
-            </p>
+            <div class="detail-row">
+                <div class="detail-label">Incident Date</div>
+                <div class="detail-value">{{ \Carbon\Carbon::parse($report->incident_date)->format('F j, Y') }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Incident Time</div>
+                <div class="detail-value">{{ \Carbon\Carbon::createFromFormat('H:i', $report->incident_time)->format('g:i A') }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Location</div>
+                <div class="detail-value">{{ $report->location_description }}</div>
+            </div>
+            @if ($report->vehicle_type)
+            <div class="detail-row">
+                <div class="detail-label">Vehicle Type(s)</div>
+                <div class="detail-value">{{ ucwords(str_replace(['_', ','], [' ', ', '], $report->vehicle_type)) }}</div>
+            </div>
+            @endif
+            <div class="detail-row">
+                <div class="detail-label">Injuries Reported</div>
+                <div class="detail-value">{{ $report->people_hurt ? 'Yes (' . $report->injured_count . ' injured)' : 'None reported' }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Status</div>
+                <div class="detail-value"><span class="badge badge-pending">{{ ucfirst($report->status) }}</span></div>
+            </div>
         </div>
 
-        <div class="footer">
-            <p>This is an automated message from <strong>STAP Hub</strong>.<br>
-            Mayor Gil Fernando Avenue &amp; Sumulong Highway, Quezon City</p>
+        <div class="note">
+            Our team will review your report and may contact you at this email address
+            if additional information is needed. Please keep this reference number
+            <strong>#{{ str_pad($report->incident_id, 5, '0', STR_PAD_LEFT) }}</strong> for your records.
         </div>
     </div>
+    <div class="footer">
+        <p><strong>STAP Hub</strong> — Mayor Gil Fernando Avenue / Sumulong Highway, Marikina City</p>
+        <p>This is an automated message. Please do not reply directly to this email.</p>
+    </div>
+</div>
 </body>
 </html>
