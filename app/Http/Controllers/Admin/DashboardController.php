@@ -26,11 +26,24 @@ class DashboardController extends Controller
     public function summary()
     {
         $data = [
-            'nodes'          => StapNode::select('id', 'name', 'status', 'mode', 'last_ping_at')->get(),
-            'camera_count'   => Camera::count(),
-            'active_alerts'  => Alert::where('resolved', false)->count(),
-            'recent_activity' => AdminActivityLog::with('admin:id,name')
-                ->latest()
+            'nodes' => StapNode::select(
+                    'node_id',
+                    'node_name',
+                    'status',
+                    'last_heartbeat'
+                )->get()->map(function($node) {
+                    return [
+                        'id'           => $node->node_id,
+                        'name'         => $node->node_name,
+                        'status'       => $node->status,
+                        'mode'         => 'auto',
+                        'last_ping_at' => $node->last_heartbeat,
+                    ];
+                }),
+            'camera_count'    => \App\Models\Camera::count(),
+            'active_alerts'   => \App\Models\Alert::where('is_resolved', false)->count(),
+            'recent_activity' => \App\Models\AdminActivityLog::with('admin:admin_id,admin_name')
+                ->latest('performed_at')
                 ->take(10)
                 ->get(),
         ];

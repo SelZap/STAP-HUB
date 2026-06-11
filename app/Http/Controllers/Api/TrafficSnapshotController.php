@@ -30,7 +30,7 @@ class TrafficSnapshotController extends Controller
             'motorcycles'         => 'required|integer|min:0',
             'buses'               => 'required|integer|min:0',
             'emergency_vehicles'  => 'required|integer|min:0',
-            'congestion'          => 'required|in:free_flow,moderate,heavy,severe',
+            'congestion'          => 'required|in:A,B,C,D,E,F',
             'snapshot_time'       => 'required|date',
             'image'               => 'nullable|string',  // base64 image from STAP Node
             'video'               => 'nullable|string',  // base64 video from STAP Node
