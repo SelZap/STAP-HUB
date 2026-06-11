@@ -10,6 +10,7 @@ WORKDIR /var/www
 COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
+RUN composer dump-autoload --optimize
 RUN chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8080
