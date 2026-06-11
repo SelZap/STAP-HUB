@@ -20,7 +20,7 @@ class TrafficSnapshot extends Model
         'fire_truck',
         'tricycle',
         'jeepney',
-        'congestion',
+        'congestion_level',
         'image_url',
         'video_url',
         'created_at',
