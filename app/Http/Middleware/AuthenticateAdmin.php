@@ -14,13 +14,27 @@ class AuthenticateAdmin
 {
     public function handle(Request $request, Closure $next)
     {
+        // 1. Try to get the token from the Authorization header first,
+        //    then fall back to the admin_token cookie.
+        $token = null;
+
+        // Parse Bearer token from Authorization header manually so we
+        // don't trigger a JWTException just because no token is present.
+        $authHeader = $request->header('Authorization', '');
+        if (str_starts_with($authHeader, 'Bearer ')) {
+            $token = trim(substr($authHeader, 7));
+        }
+
+        // Fallback: cookie (set by the login response)
+        if (empty($token)) {
+            $token = $request->cookie('admin_token');
+        }
+
+        if (empty($token)) {
+            return $this->unauthenticated($request, 'No authentication token provided.');
+        }
+
         try {
-            $token = JWTAuth::getToken() ?: $request->cookie('admin_token');
-
-            if (! $token) {
-                return $this->unauthenticated($request, 'Admin not found.');
-            }
-
             $admin = JWTAuth::setToken($token)->authenticate();
 
             if (! $admin) {
@@ -35,7 +49,7 @@ class AuthenticateAdmin
         } catch (TokenInvalidException $e) {
             return $this->unauthenticated($request, 'Token is invalid.');
         } catch (JWTException $e) {
-            return $this->unauthenticated($request, 'Token missing or malformed.');
+            return $this->unauthenticated($request, 'Token is malformed or missing.');
         }
 
         return $next($request);
@@ -43,7 +57,7 @@ class AuthenticateAdmin
 
     private function unauthenticated(Request $request, string $message)
     {
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() || $request->is('admin/api/*') || $request->wantsJson()) {
             return response()->json(['message' => $message], 401);
         }
 

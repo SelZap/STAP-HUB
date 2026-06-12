@@ -11,27 +11,55 @@ use Carbon\Carbon;
 
 class LandingController extends Controller
 {
+    /**
+     * Map camera direction to the display label shown on the public dashboard.
+     */
+    private function cameraDirectionLabel(string $direction): string
+    {
+        return match (strtolower(trim($direction))) {
+            'northbound' => 'Mayor Gil Fernando Ave North',
+            'southbound' => 'Mayor Gil Fernando Ave South',
+            'eastbound'  => 'Sumulong Hwy East',
+            'westbound'  => 'Sumulong Hwy West',
+            default      => $direction,
+        };
+    }
+
     public function index()
     {
         $today = Carbon::today();
 
         // --------------------------------------------------------
         // 1. Live Vehicle Count
-        // Get the latest snapshot per camera, grouped by node/location
+        // Get the latest snapshot per camera, group by camera direction
         // --------------------------------------------------------
-        $latestSnapshots = TrafficSnapshot::with('camera.node')
+        $latestSnapshots = TrafficSnapshot::with('camera')
             ->whereIn('snapshot_id', function ($query) {
                 $query->select(DB::raw('MAX(snapshot_id)'))
                       ->from('traffic_snapshots')
                       ->groupBy('camera_id');
             })
             ->get()
-            ->groupBy(fn ($s) => $s->camera->node->location_label ?? 'Unknown');
+            ->groupBy(function ($s) {
+                $direction = $s->camera->direction ?? null;
+                if ($direction) {
+                    return $this->cameraDirectionLabel($direction);
+                }
+                // Fallback: use camera label
+                return $s->camera->label ?? 'Unknown';
+            });
+
+        // Defined display order for the four directions
+        $orderedKeys = [
+            'Mayor Gil Fernando Ave North',
+            'Mayor Gil Fernando Ave South',
+            'Sumulong Hwy East',
+            'Sumulong Hwy West',
+        ];
 
         // Build per-location summary: total vehicle count + LOS
         $liveVehicleData = $latestSnapshots->map(function ($snapshots, $location) {
             $totalVehicles = $snapshots->sum('vehicle_count');
-            // Use the highest (worst) LOS among cameras in this location
             $losOrder  = ['A' => 1, 'B' => 2, 'C' => 3, 'D' => 4, 'E' => 5, 'F' => 6];
             $worstLos  = $snapshots->sortByDesc(fn ($s) => $losOrder[$s->congestion_level] ?? 0)
                                    ->first()->congestion_level ?? 'A';
@@ -41,17 +69,27 @@ class LandingController extends Controller
                 'los'            => $worstLos,
                 'los_label'      => TrafficSnapshot::$losLabels[$worstLos] ?? '',
             ];
+        });
+
+        // Sort by the defined display order, unknown directions go last
+        $liveVehicleData = $liveVehicleData->sortBy(function ($item) use ($orderedKeys) {
+            $pos = array_search($item['location'], $orderedKeys);
+            return $pos === false ? 99 : $pos;
         })->values();
 
         // --------------------------------------------------------
         // 2. Traffic History
-        // Hourly LOS per location for today (grouped by hour)
+        // Hourly LOS per camera direction for today
         // --------------------------------------------------------
-        $hourlySnapshots = TrafficSnapshot::with('camera.node')
+        $hourlySnapshots = TrafficSnapshot::with('camera')
             ->whereDate('captured_at', $today)
             ->get()
             ->groupBy(function ($s) {
-                return $s->camera->node->location_label ?? 'Unknown';
+                $direction = $s->camera->direction ?? null;
+                if ($direction) {
+                    return $this->cameraDirectionLabel($direction);
+                }
+                return $s->camera->label ?? 'Unknown';
             });
 
         $trafficHistory = [];
@@ -71,12 +109,17 @@ class LandingController extends Controller
             return Carbon::createFromFormat('g:i A', $a) <=> Carbon::createFromFormat('g:i A', $b);
         });
 
-        // Get unique location labels
+        // Use ordered location list for table columns
         $locations = $liveVehicleData->pluck('location')->toArray();
+        // Ensure all four are present even if no data yet
+        foreach ($orderedKeys as $key) {
+            if (! in_array($key, $locations)) {
+                $locations[] = $key;
+            }
+        }
 
         // --------------------------------------------------------
         // 3. Rain & Weather Log
-        // Today's weather logs per hour, per node
         // --------------------------------------------------------
         $weatherLogs = WeatherLog::with('node')
             ->whereDate('recorded_at', $today)
@@ -84,7 +127,6 @@ class LandingController extends Controller
             ->get()
             ->groupBy(fn ($w) => Carbon::parse($w->recorded_at)->format('g:i A'));
 
-        // Map rain_intensity to display info
         $rainMap = [
             'none'     => ['label' => 'No Rain',       'color' => '#D0D6E8', 'pct' => 5  ],
             'light'    => ['label' => 'Minimal Rain',  'color' => '#29B357', 'pct' => 35 ],
@@ -93,7 +135,6 @@ class LandingController extends Controller
         ];
 
         $weatherData = $weatherLogs->map(function ($logs, $time) use ($rainMap) {
-            // Use the worst rain intensity at that hour
             $order       = ['none' => 0, 'light' => 1, 'moderate' => 2, 'heavy' => 3];
             $worstRain   = $logs->sortByDesc(fn ($w) => $order[$w->rain_intensity] ?? 0)
                                  ->first()->rain_intensity ?? 'none';
