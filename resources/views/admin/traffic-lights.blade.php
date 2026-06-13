@@ -4,241 +4,370 @@
 
 @push('styles')
 <style>
-    /* ── Layout ─────────────────────────────────────────────── */
-    .ctrl-layout {
+    /* ── Base ─────────────────────────────────────────────────── */
+    .tl-page { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── Node IP Bar ─────────────────────────────────────────── */
+    .tl-ip-bar {
+        background: #1a1a2e;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 12px;
+        padding: 10px 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: rgba(255,255,255,.6);
+    }
+
+    .tl-ip-bar input {
+        background: rgba(255,255,255,.07);
+        border: 1.5px solid rgba(255,255,255,.15);
+        border-radius: 7px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-family: monospace;
+        width: 160px;
+        color: #fff;
+        outline: none;
+    }
+
+    .tl-ip-bar input:focus { border-color: rgba(255,255,255,.4); }
+
+    .tl-ip-bar button {
+        background: rgba(255,255,255,.1);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 7px;
+        padding: 5px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .tl-ip-bar button:hover { background: rgba(255,255,255,.18); }
+
+    .tl-node-indicator {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: rgba(255,255,255,.7);
+    }
+
+    .tl-node-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: #475569;
+        transition: background .3s;
+    }
+
+    .tl-node-dot.connected    { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.25); }
+    .tl-node-dot.disconnected { background: #ef4444; }
+
+    /* ── Main Layout ─────────────────────────────────────────── */
+    .tl-main {
         display: grid;
-        grid-template-columns: 1fr 300px;
+        grid-template-columns: 1fr 1fr 320px;
         gap: 1.25rem;
         align-items: start;
     }
 
-    @media (max-width: 960px) {
-        .ctrl-layout { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 1100px) { .tl-main { grid-template-columns: 1fr 320px; } }
+    @media (max-width: 760px)  { .tl-main { grid-template-columns: 1fr; } }
 
-    /* ── Card Base ───────────────────────────────────────────── */
-    .ctrl-card {
+    /* ── Card ────────────────────────────────────────────────── */
+    .tl-card {
         background: #fff;
-        border-radius: .875rem;
+        border-radius: 14px;
         border: 1px solid rgba(15,23,42,.08);
-        box-shadow: 0 4px 14px rgba(15,23,42,.06);
+        box-shadow: 0 4px 18px rgba(15,23,42,.07);
         overflow: hidden;
-        margin-bottom: 1rem;
     }
 
-    .ctrl-card-header {
-        padding: .875rem 1.25rem;
+    .tl-card-header {
+        padding: .8rem 1.2rem;
         border-bottom: 1px solid rgba(15,23,42,.07);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: .75rem;
+        gap: .5rem;
     }
 
-    .ctrl-card-title {
-        font-size: .92rem;
+    .tl-card-title {
+        font-size: .85rem;
         font-weight: 800;
         color: #0f172a;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .tl-card-body { padding: 1.2rem; }
+
+    /* ── CONTROL BOX panel ───────────────────────────────────── */
+    .tl-controlbox {
+        background: #d1d5db;
+        border-radius: 16px;
+        border: 3px solid #9ca3af;
+        padding: 1.5rem 1.25rem 1.25rem;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,.15), 0 8px 24px rgba(0,0,0,.12);
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .tl-controlbox-label {
+        font-size: .65rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .12em;
+        color: #374151;
+        margin-bottom: .5rem;
+        text-align: center;
+    }
+
+    /* ── Mode Row (top of control box) ──────────────────────── */
+    .tl-mode-row {
         display: flex;
         align-items: center;
-        gap: .5rem;
-    }
-
-    .ctrl-card-body { padding: 1.25rem; }
-
-    /* ── Node IP Bar ─────────────────────────────────────────── */
-    .ctrl-ip-bar {
-        background: #fef9ec;
-        border: 1px solid #fde68a;
-        border-radius: 10px;
-        padding: 10px 16px;
-        font-size: 12px;
-        color: #92400e;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .ctrl-ip-bar input {
-        border: 1.5px solid #fbbf24;
-        border-radius: 6px;
-        padding: 4px 10px;
-        font-size: 12px;
-        font-family: monospace;
-        width: 160px;
-        outline: none;
-    }
-
-    .ctrl-ip-bar button {
-        background: #0f172a;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        padding: 5px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    /* ── Mode Buttons ────────────────────────────────────────── */
-    .ctrl-mode-row {
-        display: flex;
         gap: .75rem;
-        flex-wrap: wrap;
+        justify-content: center;
     }
 
-    .ctrl-mode-btn {
-        flex: 1;
-        min-width: 120px;
-        padding: .875rem 1rem;
-        border-radius: .75rem;
-        border: 2px solid transparent;
-        font-size: .88rem;
-        font-weight: 700;
+    /* Square MANUAL button */
+    .tl-btn-manual {
+        width: 64px; height: 64px;
+        border-radius: 10px;
+        background: linear-gradient(145deg, #374151, #1f2937);
+        border: 3px solid #111827;
+        box-shadow: 0 4px 0 #111, inset 0 1px 0 rgba(255,255,255,.1);
         cursor: pointer;
-        transition: all .18s;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: .35rem;
-        background: #f8fafc;
-        color: #64748b;
+        justify-content: center;
+        gap: 3px;
+        color: rgba(255,255,255,.6);
+        font-size: .6rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        transition: all .12s;
+        position: relative;
     }
 
-    .ctrl-mode-btn .ctrl-mode-icon { font-size: 1.5rem; }
+    .tl-btn-manual:hover { transform: translateY(-1px); box-shadow: 0 5px 0 #111, inset 0 1px 0 rgba(255,255,255,.15); }
+    .tl-btn-manual:active { transform: translateY(2px); box-shadow: 0 2px 0 #111; }
+    .tl-btn-manual.active {
+        background: linear-gradient(145deg, #1e3a5f, #1e40af);
+        border-color: #1d4ed8;
+        color: #fff;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.4), 0 4px 0 #1e3a5f;
+    }
 
-    .ctrl-mode-btn:hover { border-color: #cbd5e1; background: #f1f5f9; }
+    /* Round colored mode buttons */
+    .tl-btn-round {
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        box-shadow: 0 4px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        font-size: .55rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: rgba(255,255,255,.85);
+        transition: all .12s;
+    }
 
-    .ctrl-mode-btn.active-auto    { background: #dcfce7; color: #166534; border-color: #22c55e; }
-    .ctrl-mode-btn.active-manual  { background: #dbeafe; color: #1e40af; border-color: #3b82f6; }
-    .ctrl-mode-btn.active-hazard  { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+    .tl-btn-round:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .tl-btn-round:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
 
-    /* ── Lane Grid ───────────────────────────────────────────── */
-    .ctrl-lane-grid {
+    /* STAP Mode — blue */
+    .tl-btn-stap {
+        background: radial-gradient(circle at 35% 35%, #60a5fa, #2563eb);
+        border-color: #1d4ed8;
+    }
+
+    .tl-btn-stap.active {
+        box-shadow: 0 0 0 4px rgba(59,130,246,.45), 0 4px 0 #1e3a5f;
+    }
+
+    /* Hazard — orange */
+    .tl-btn-hazard {
+        background: radial-gradient(circle at 35% 35%, #fb923c, #ea580c);
+        border-color: #c2410c;
+    }
+
+    .tl-btn-hazard.active {
+        box-shadow: 0 0 0 4px rgba(249,115,22,.45), 0 4px 0 #7c2d12;
+    }
+
+    /* Emergency — red */
+    .tl-btn-emergency-mode {
+        background: radial-gradient(circle at 35% 35%, #f87171, #dc2626);
+        border-color: #b91c1c;
+    }
+
+    .tl-btn-emergency-mode.active {
+        box-shadow: 0 0 0 4px rgba(239,68,68,.45), 0 4px 0 #7f1d1d;
+        animation: emergencyPulse 1s infinite;
+    }
+
+    @keyframes emergencyPulse {
+        0%, 100% { box-shadow: 0 0 0 4px rgba(239,68,68,.45), 0 4px 0 #7f1d1d; }
+        50%       { box-shadow: 0 0 0 8px rgba(239,68,68,.2),  0 4px 0 #7f1d1d; }
+    }
+
+    /* ── Lane Buttons (green circles) ───────────────────────── */
+
+
+    .tl-lane-compass {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: .875rem;
+        gap: .65rem;
+        max-width: 240px;
+        margin: 0 auto;
     }
 
-    @media (max-width: 600px) {
-        .ctrl-lane-grid { grid-template-columns: 1fr; }
-    }
-
-    .ctrl-lane-card {
-        border-radius: .75rem;
-        border: 2px solid #e2e8f0;
-        overflow: hidden;
-        transition: border-color .2s;
-    }
-
-    .ctrl-lane-card.active-lane { border-color: #22c55e; }
-
-    .ctrl-lane-header {
-        padding: .6rem 1rem;
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .ctrl-lane-name { font-size: .85rem; font-weight: 800; color: #0f172a; }
-
-    .ctrl-lane-badge {
-        font-size: .68rem;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 20px;
-        text-transform: uppercase;
-    }
-
-    .ctrl-lane-badge.green  { background: #dcfce7; color: #166534; }
-    .ctrl-lane-badge.yellow { background: #fef3c7; color: #92400e; }
-    .ctrl-lane-badge.red    { background: #fee2e2; color: #991b1b; }
-
-    .ctrl-lane-body { padding: .75rem; }
-
-    /* ── Light Buttons ───────────────────────────────────────── */
-    .ctrl-light-row {
-        display: flex;
-        gap: .5rem;
-        margin-bottom: .6rem;
-    }
-
-    .ctrl-light-btn {
-        flex: 1;
-        padding: .55rem .25rem;
-        border: 2px solid transparent;
-        border-radius: .6rem;
-        font-size: .75rem;
-        font-weight: 700;
+    .tl-lane-btn {
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #4ade80, #16a34a);
+        border: 3px solid #15803d;
+        box-shadow: 0 4px 0 #14532d, inset 0 1px 0 rgba(255,255,255,.3);
         cursor: pointer;
-        transition: all .15s;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: .2rem;
+        justify-content: center;
+        gap: 2px;
+        color: rgba(255,255,255,.9);
+        font-size: .7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        transition: all .12s;
+        min-width: 72px;
+        min-height: 72px;
     }
 
-    .ctrl-light-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .tl-lane-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+    .tl-lane-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #14532d; }
+    .tl-lane-btn:disabled { opacity: .35; cursor: not-allowed; filter: grayscale(.6); }
 
-    .ctrl-light-btn.btn-red    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-    .ctrl-light-btn.btn-yellow { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
-    .ctrl-light-btn.btn-green  { background: #dcfce7; color: #166534; border-color: #86efac; }
-
-    .ctrl-light-btn.btn-red:hover:not(:disabled)    { background: #fca5a5; }
-    .ctrl-light-btn.btn-yellow:hover:not(:disabled) { background: #fcd34d; }
-    .ctrl-light-btn.btn-green:hover:not(:disabled)  { background: #86efac; }
-
-    .ctrl-light-btn.active { box-shadow: 0 0 0 3px rgba(15,23,42,.18); transform: scale(1.04); }
-
-    .ctrl-light-dot {
-        width: .85rem;
-        height: .85rem;
-        border-radius: 50%;
+    .tl-lane-btn.active-green {
+        background: radial-gradient(circle at 35% 35%, #86efac, #22c55e);
+        box-shadow: 0 0 0 4px rgba(34,197,94,.4), 0 4px 0 #14532d;
     }
 
-    .ctrl-light-dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
-    .ctrl-light-dot.yellow { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
-    .ctrl-light-dot.green  { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
-    .ctrl-light-dot.off    { background: #e2e8f0; }
+    .tl-lane-btn.active-red {
+        background: radial-gradient(circle at 35% 35%, #f87171, #dc2626);
+        border-color: #b91c1c;
+        box-shadow: 0 0 0 4px rgba(239,68,68,.3), 0 4px 0 #7f1d1d;
+    }
 
-    /* ── Emergency Button ────────────────────────────────────── */
-    .ctrl-emergency-btn {
-        width: 100%;
-        padding: .55rem;
-        background: #fff1f2;
-        border: 2px solid #fca5a5;
-        border-radius: .6rem;
-        color: #991b1b;
-        font-size: .75rem;
+    .tl-lane-btn.active-yellow {
+        background: radial-gradient(circle at 35% 35%, #fde047, #eab308);
+        border-color: #a16207;
+        box-shadow: 0 0 0 4px rgba(234,179,8,.3), 0 4px 0 #713f12;
+        color: #1a0a00;
+    }
+
+    .tl-lane-icon { font-size: 1rem; }
+
+    /* ── Divider in control box ──────────────────────────────── */
+    .tl-divider {
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #9ca3af, transparent);
+        border-radius: 2px;
+    }
+
+    /* ── Camera Grid ─────────────────────────────────────────── */
+    .tl-cam-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .75rem;
+    }
+
+    .tl-cam-cell {
+        border-radius: 10px;
+        overflow: hidden;
+        background: #0f172a;
+        border: 1px solid rgba(255,255,255,.06);
+        position: relative;
+        aspect-ratio: 16/9;
+    }
+
+    .tl-cam-cell img.mjpeg {
+        width: 100%; height: 100%;
+        object-fit: cover;
+        display: none;
+    }
+
+    .tl-cam-offline {
+        position: absolute; inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        color: rgba(255,255,255,.25);
+        font-size: .65rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .tl-cam-dir-tag {
+        position: absolute;
+        top: 5px; left: 5px;
+        background: rgba(15,23,42,.75);
+        color: rgba(255,255,255,.9);
+        font-size: .6rem;
         font-weight: 800;
-        cursor: pointer;
-        transition: all .15s;
-        letter-spacing: .02em;
+        padding: 2px 7px;
+        border-radius: 5px;
+        letter-spacing: .06em;
+        backdrop-filter: blur(4px);
     }
 
-    .ctrl-emergency-btn:hover:not(:disabled) { background: #fca5a5; }
-    .ctrl-emergency-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .tl-cam-status-dot {
+        position: absolute;
+        top: 6px; right: 6px;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: #ef4444;
+    }
 
-    /* ── Sidebar Status ──────────────────────────────────────── */
-    .ctrl-status-row {
+    .tl-cam-status-dot.online { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .tl-sidebar { display: flex; flex-direction: column; gap: 1rem; }
+
+    /* ── Status Panel ────────────────────────────────────────── */
+    .tl-status-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 7px 0;
+        padding: 6px 0;
         border-bottom: 1px solid #f1f5f9;
         font-size: 12px;
     }
 
-    .ctrl-status-row:last-child { border-bottom: none; }
-    .ctrl-status-label { color: #64748b; font-weight: 600; }
-    .ctrl-status-value { font-weight: 700; color: #0f172a; }
+    .tl-status-row:last-child { border-bottom: none; }
+    .tl-status-label { color: #64748b; font-weight: 600; }
+    .tl-status-value { font-weight: 700; color: #0f172a; }
 
-    .ctrl-phase-badge {
-        display: inline-block;
+    .tl-phase-badge {
         padding: 2px 10px;
         border-radius: 20px;
         font-size: 11px;
@@ -246,22 +375,22 @@
         text-transform: uppercase;
     }
 
-    .ctrl-phase-green  { background: #dcfce7; color: #166534; }
-    .ctrl-phase-yellow { background: #fef3c7; color: #92400e; }
-    .ctrl-phase-red    { background: #fee2e2; color: #991b1b; }
+    .tl-phase-green  { background: #dcfce7; color: #166534; }
+    .tl-phase-yellow { background: #fef3c7; color: #92400e; }
+    .tl-phase-red    { background: #fee2e2; color: #991b1b; }
 
     /* ── Activity Log ────────────────────────────────────────── */
-    .ctrl-log {
-        max-height: 220px;
+    .tl-log {
+        max-height: 200px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: .4rem;
+        gap: .35rem;
     }
 
-    .ctrl-log-entry {
-        font-size: .75rem;
-        padding: .4rem .6rem;
+    .tl-log-entry {
+        font-size: .72rem;
+        padding: .35rem .6rem;
         border-radius: 6px;
         background: #f8fafc;
         border-left: 3px solid #e2e8f0;
@@ -269,190 +398,267 @@
         line-height: 1.4;
     }
 
-    .ctrl-log-entry.success { border-left-color: #22c55e; }
-    .ctrl-log-entry.error   { border-left-color: #ef4444; }
-    .ctrl-log-entry.info    { border-left-color: #3b82f6; }
-
-    /* ── Node Connection Indicator ───────────────────────────── */
-    .ctrl-node-indicator {
-        display: flex;
-        align-items: center;
-        gap: .5rem;
-        font-size: .78rem;
-        font-weight: 700;
-    }
-
-    .ctrl-node-dot {
-        width: .55rem;
-        height: .55rem;
-        border-radius: 50%;
-        background: #94a3b8;
-    }
-
-    .ctrl-node-dot.connected    { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
-    .ctrl-node-dot.disconnected { background: #ef4444; }
+    .tl-log-entry.success { border-left-color: #22c55e; }
+    .tl-log-entry.error   { border-left-color: #ef4444; }
+    .tl-log-entry.info    { border-left-color: #3b82f6; }
 
     /* ── Toast ───────────────────────────────────────────────── */
-    .ctrl-toast {
+    .tl-toast {
         position: fixed;
-        bottom: 1.5rem;
-        right: 1.5rem;
+        bottom: 1.5rem; right: 1.5rem;
         background: #0f172a;
         color: #fff;
         padding: .75rem 1.25rem;
         border-radius: .75rem;
         font-size: .85rem;
         font-weight: 600;
-        box-shadow: 0 8px 24px rgba(15,23,42,.25);
+        box-shadow: 0 8px 24px rgba(15,23,42,.3);
         z-index: 9999;
-        transform: translateY(120%);
+        transform: translateY(130%);
         transition: transform .25s;
-        max-width: 300px;
+        max-width: 280px;
     }
 
-    .ctrl-toast.show { transform: translateY(0); }
-    .ctrl-toast.toast-error { background: #991b1b; }
+    .tl-toast.show       { transform: translateY(0); }
+    .tl-toast.toast-err  { background: #991b1b; }
+
+    /* ── Mode hint strip ─────────────────────────────────────── */
+    .tl-mode-hint {
+        text-align: center;
+        font-size: .7rem;
+        font-weight: 700;
+        color: #6b7280;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        margin-top: -.25rem;
+    }
+
+    .tl-btn-label {
+        font-size: .55rem;
+        font-weight: 800;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        line-height: 1;
+    }
 </style>
 @endpush
 
 @section('content')
 
 {{-- Node IP Bar --}}
-<div class="ctrl-ip-bar">
+<div class="tl-page">
+<div class="tl-ip-bar">
     <span>⚙️ STAP Node IP:</span>
     <input type="text" id="nodeIpInput" value="192.168.1.100" placeholder="e.g. 192.168.1.50">
     <button onclick="applyNodeIp()">Apply</button>
-    <div class="ctrl-node-indicator" style="margin-left:auto;">
-        <span class="ctrl-node-dot" id="nodeConnDot"></span>
+    <span id="nodeIpMsg" style="font-size:11px;color:#22c55e;"></span>
+    <div class="tl-node-indicator">
+        <span class="tl-node-dot" id="nodeConnDot"></span>
         <span id="nodeConnLabel">Connecting...</span>
     </div>
 </div>
 
-<div class="ctrl-layout">
+<div class="tl-main">
 
-    {{-- Left: Controls --}}
+    {{-- Col 1: Control Box --}}
     <div>
-
-        {{-- Mode Control --}}
-        <div class="ctrl-card">
-            <div class="ctrl-card-header">
-                <span class="ctrl-card-title">🚦 System Mode</span>
-                <span style="font-size:.75rem;color:#64748b;" id="modeHint">Select a mode to begin</span>
+        <div class="tl-card">
+            <div class="tl-card-header">
+                <span class="tl-card-title">Control Panel</span>
+                <span style="font-size:.72rem;color:#94a3b8;" id="modeHint">Select a mode</span>
             </div>
-            <div class="ctrl-card-body">
-                <div class="ctrl-mode-row">
-                    <button class="ctrl-mode-btn" id="btn-auto" onclick="setMode('auto')">
-                        <span class="ctrl-mode-icon">🤖</span>
-                        <span>Auto</span>
-                        <span style="font-size:.7rem;font-weight:500;opacity:.7;">AI Controlled</span>
-                    </button>
-                    <button class="ctrl-mode-btn" id="btn-manual" onclick="setMode('manual')">
-                        <span class="ctrl-mode-icon">🕹️</span>
-                        <span>Manual</span>
-                        <span style="font-size:.7rem;font-weight:500;opacity:.7;">Admin Override</span>
-                    </button>
-                    <button class="ctrl-mode-btn" id="btn-hazard" onclick="setMode('hazard')">
-                        <span class="ctrl-mode-icon">⚠️</span>
-                        <span>Hazard</span>
-                        <span style="font-size:.7rem;font-weight:500;opacity:.7;">All Yellow Flash</span>
-                    </button>
-                </div>
-            </div>
-        </div>
+            <div class="tl-card-body">
+                <div class="tl-controlbox">
 
-        {{-- Lane Light Control --}}
-        <div class="ctrl-card">
-            <div class="ctrl-card-header">
-                <span class="ctrl-card-title">🔦 Lane Light Control</span>
-                <span style="font-size:.75rem;color:#94a3b8;" id="laneHint">Switch to Manual or Hazard mode first</span>
-            </div>
-            <div class="ctrl-card-body">
-                <div class="ctrl-lane-grid" id="laneGrid">
+                    {{-- Mode Buttons --}}
+                    <div>
+                        <div class="tl-controlbox-label">System Mode</div>
+                        <div class="tl-mode-row">
 
-                    @foreach (['NORTH', 'SOUTH', 'EAST', 'WEST'] as $lane)
-                    <div class="ctrl-lane-card" id="laneCard-{{ $lane }}">
-                        <div class="ctrl-lane-header">
-                            <span class="ctrl-lane-name">{{ $lane }}</span>
-                            <span class="ctrl-lane-badge red" id="laneBadge-{{ $lane }}">RED</span>
-                        </div>
-                        <div class="ctrl-lane-body">
-                            <div class="ctrl-light-row">
-                                <button class="ctrl-light-btn btn-red"    id="btn-{{ $lane }}-red"    onclick="setLight('{{ $lane }}','red')"    disabled>
-                                    <span class="ctrl-light-dot off" id="dot-{{ $lane }}-red"></span>RED
-                                </button>
-                                <button class="ctrl-light-btn btn-yellow" id="btn-{{ $lane }}-yellow" onclick="setLight('{{ $lane }}','yellow')" disabled>
-                                    <span class="ctrl-light-dot off" id="dot-{{ $lane }}-yellow"></span>YLW
-                                </button>
-                                <button class="ctrl-light-btn btn-green"  id="btn-{{ $lane }}-green"  onclick="setLight('{{ $lane }}','green')"  disabled>
-                                    <span class="ctrl-light-dot off" id="dot-{{ $lane }}-green"></span>GRN
+                            {{-- Square: Manual --}}
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+                                <button class="tl-btn-manual" id="btn-manual" onclick="setMode('manual')" title="Manual Override">
+                                    <span style="font-size:1.2rem;">🕹️</span>
+                                    <span class="tl-btn-label">Manual</span>
                                 </button>
                             </div>
-                            <button class="ctrl-emergency-btn" id="btn-{{ $lane }}-emergency" onclick="triggerEmergency('{{ $lane }}')" disabled>
-                                🚨 EMERGENCY OVERRIDE
-                            </button>
+
+                            {{-- Round: STAP (Auto) --}}
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+                                <button class="tl-btn-round tl-btn-stap active" id="btn-auto" onclick="setMode('auto')" title="STAP Auto Mode">
+                                    <span style="font-size:1rem;">🤖</span>
+                                    <span class="tl-btn-label">STAP</span>
+                                </button>
+                            </div>
+
+                            {{-- Round: Hazard --}}
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+                                <button class="tl-btn-round tl-btn-hazard" id="btn-hazard" onclick="setMode('hazard')" title="Hazard Mode">
+                                    <span style="font-size:1rem;">⚠️</span>
+                                    <span class="tl-btn-label">Hazard</span>
+                                </button>
+                            </div>
+
+                            {{-- Round: Emergency --}}
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+                                <button class="tl-btn-round tl-btn-emergency-mode" id="btn-emergency-panel" onclick="showEmergencyPicker()" title="Emergency Override">
+                                    <span style="font-size:1rem;">🚨</span>
+                                    <span class="tl-btn-label">Emergency</span>
+                                </button>
+                            </div>
+
                         </div>
                     </div>
-                    @endforeach
+
+                    <div class="tl-divider"></div>
+
+                    {{-- Lane Buttons --}}
+                    <div class="tl-lane-section">
+                        <div class="tl-controlbox-label">Lane Control</div>
+                        <div class="tl-lane-compass">
+@foreach ([
+    ['lane' => 'NORTH', 'icon' => '↑'],
+    ['lane' => 'EAST',  'icon' => '→'],
+    ['lane' => 'WEST',  'icon' => '←'],
+    ['lane' => 'SOUTH', 'icon' => '↓'],
+] as $l)
+<button
+    class="tl-lane-btn"
+    id="laneBtn-{{ $l['lane'] }}"
+    data-lane="{{ $l['lane'] }}"
+    onclick="cycleLaneLight(this.dataset.lane)"
+    disabled
+    title="{{ $l['lane'] }} Lane"
+>
+    <span class="tl-lane-icon">{{ $l['icon'] }}</span>
+    <span class="tl-btn-label">{{ $l['lane'] }}</span>
+    <span style="font-size:.5rem;opacity:.8;" id="laneState-{{ $l['lane'] }}">RED</span>
+</button>
+@endforeach
+                        </div>
+                        <div class="tl-mode-hint" style="margin-top:.75rem;" id="laneHint">Enable Manual mode to control lanes</div>
+                    </div>
 
                 </div>
             </div>
         </div>
-
     </div>
 
-    {{-- Right: Sidebar --}}
+    {{-- Col 2: Camera Feeds --}}
     <div>
-
-        {{-- Live System Status --}}
-        <div class="ctrl-card">
-            <div class="ctrl-card-header">
-                <span class="ctrl-card-title">📡 Live Status</span>
-                <span style="font-size:.7rem;color:#94a3b8;" id="lastPoll">—</span>
-            </div>
-            <div class="ctrl-card-body" id="statusPanel">
-                <div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px 0;">
-                    Waiting for node...
+        <div class="tl-card" style="background:#0f172a;">
+            <div class="tl-card-header" style="background:#0f172a;border-bottom-color:rgba(255,255,255,.07);">
+                <span class="tl-card-title" style="color:#fff;">Live Feeds</span>
+                <div style="display:flex;align-items:center;gap:.4rem;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:livePulse 1.6s infinite;"></span>
+                    <span style="font-size:.72rem;color:rgba(255,255,255,.5);">4 cameras</span>
                 </div>
+            </div>
+            <div class="tl-card-body" style="padding:.875rem;">
+                <div class="tl-cam-grid">
+                    @foreach (['NORTH','SOUTH','EAST','WEST'] as $dir)
+                    <div class="tl-cam-cell">
+                        <img class="mjpeg" id="stream-{{ strtolower($dir) }}" src="" alt="{{ $dir }}" onerror="handleStreamError(this)">
+                        <div class="tl-cam-offline" id="offline-{{ strtolower($dir) }}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            <span>Offline</span>
+                        </div>
+                        <span class="tl-cam-dir-tag">{{ $dir }}</span>
+                        <span class="tl-cam-status-dot" id="camDot-{{ strtolower($dir) }}"></span>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Col 3: Sidebar --}}
+    <div class="tl-sidebar">
+
+        {{-- Live Status --}}
+        <div class="tl-card">
+            <div class="tl-card-header">
+                <span class="tl-card-title">📡 Live Status</span>
+                <span style="font-size:.68rem;color:#94a3b8;" id="lastPoll">—</span>
+            </div>
+            <div class="tl-card-body" id="statusPanel">
+                <div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px 0;">Waiting for node...</div>
             </div>
         </div>
 
         {{-- Activity Log --}}
-        <div class="ctrl-card">
-            <div class="ctrl-card-header">
-                <span class="ctrl-card-title">📋 Activity Log</span>
-                <button onclick="clearLog()" style="font-size:.7rem;color:#94a3b8;background:none;border:none;cursor:pointer;">Clear</button>
+        <div class="tl-card">
+            <div class="tl-card-header">
+                <span class="tl-card-title">📋 Log</span>
+                <button onclick="clearLog()" style="font-size:.68rem;color:#94a3b8;background:none;border:none;cursor:pointer;">Clear</button>
             </div>
-            <div class="ctrl-card-body" style="padding:.75rem;">
-                <div class="ctrl-log" id="activityLog">
-                    <div class="ctrl-log-entry info">Admin panel loaded. Set Node IP to begin.</div>
+            <div class="tl-card-body" style="padding:.75rem;">
+                <div class="tl-log" id="activityLog">
+                    <div class="tl-log-entry info">Panel loaded. Set Node IP to begin.</div>
                 </div>
             </div>
         </div>
 
     </div>
 </div>
+</div>
+
+{{-- Emergency Lane Picker Modal --}}
+<div id="emergencyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;padding:2rem;max-width:340px;width:90%;text-align:center;box-shadow:0 24px 48px rgba(0,0,0,.3);">
+        <div style="font-size:2rem;margin-bottom:.5rem;">🚨</div>
+        <div style="font-size:1rem;font-weight:800;color:#0f172a;margin-bottom:.35rem;">Emergency Override</div>
+        <div style="font-size:.82rem;color:#64748b;margin-bottom:1.25rem;">Select the lane that needs immediate green light access.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:1rem;">
+            @foreach (['NORTH','SOUTH','EAST','WEST'] as $dir)
+            <button onclick="triggerEmergency('{{ $dir }}')"
+                style="padding:.75rem;background:#fff1f2;border:2px solid #fca5a5;border-radius:10px;color:#991b1b;font-size:.85rem;font-weight:800;cursor:pointer;transition:background .15s;"
+                onmouseover="this.style.background='#fca5a5'" onmouseout="this.style.background='#fff1f2'">
+                {{ $dir }}
+            </button>
+            @endforeach
+        </div>
+        <button onclick="closeEmergencyModal()"
+            style="width:100%;padding:.6rem;background:#f1f5f9;border:none;border-radius:8px;color:#64748b;font-size:.82rem;font-weight:600;cursor:pointer;">
+            Cancel
+        </button>
+    </div>
+</div>
 
 {{-- Toast --}}
-<div class="ctrl-toast" id="toast"></div>
+<div class="tl-toast" id="toast"></div>
 
 @endsection
 
 @push('scripts')
+<style>
+@keyframes livePulse {
+    0%,100% { box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+    50%      { box-shadow: 0 0 0 6px rgba(34,197,94,.06); }
+}
+</style>
 <script>
     // ── Config ────────────────────────────────────────────────
-    let NODE_IP   = localStorage.getItem('stap_node_ip') || '192.168.1.100';
-    let curMode   = 'auto';
-    let curLights = { NORTH: 'red', SOUTH: 'red', EAST: 'red', WEST: 'red' };
-    const LANES   = ['NORTH', 'SOUTH', 'EAST', 'WEST'];
+    let NODE_IP  = localStorage.getItem('stap_node_ip') || '192.168.1.100';
+    let curMode  = 'auto';
+    const LANES  = ['NORTH','SOUTH','EAST','WEST'];
+    const DIRS   = ['north','south','east','west'];
+
+    // Lane state cycle: green → red (clicking toggles)
+    const laneStates = { NORTH: 'red', SOUTH: 'red', EAST: 'red', WEST: 'red' };
 
     document.getElementById('nodeIpInput').value = NODE_IP;
 
-    // ── Apply Node IP ─────────────────────────────────────────
+    // ── Apply IP ──────────────────────────────────────────────
     function applyNodeIp() {
         NODE_IP = document.getElementById('nodeIpInput').value.trim();
         localStorage.setItem('stap_node_ip', NODE_IP);
-        logActivity('Node IP set to ' + NODE_IP, 'info');
+        const msg = document.getElementById('nodeIpMsg');
+        msg.textContent = '✅ Applied';
+        setTimeout(() => msg.textContent = '', 2000);
+        loadStreams();
         startStatusPolling();
+        logActivity('Node IP set to ' + NODE_IP, 'info');
     }
 
     // ── Mode Control ──────────────────────────────────────────
@@ -460,100 +666,137 @@
         try {
             const res  = await postNode('/control/mode', { mode });
             const data = await res.json();
-
             if (data.success) {
                 curMode = mode;
                 updateModeUI(mode);
-                logActivity(`Mode switched to ${mode.toUpperCase()}`, 'success');
-                showToast(`✅ Mode: ${mode.toUpperCase()}`);
+                logActivity('Mode → ' + mode.toUpperCase(), 'success');
+                showToast('✅ ' + mode.toUpperCase() + ' mode active');
             } else {
-                logActivity('Mode switch failed: ' + (data.message || 'Unknown error'), 'error');
                 showToast('❌ ' + (data.message || 'Failed'), true);
+                logActivity('Mode switch failed: ' + (data.message || ''), 'error');
             }
         } catch (e) {
-            logActivity('Cannot reach STAP Node', 'error');
             showToast('❌ Node unreachable', true);
+            logActivity('Cannot reach STAP Node', 'error');
         }
     }
 
     function updateModeUI(mode) {
-        ['auto','manual','hazard'].forEach(m => {
-            document.getElementById('btn-' + m).className = 'ctrl-mode-btn';
-        });
-        document.getElementById('btn-' + mode).classList.add('active-' + mode);
+        // Reset all mode buttons
+        document.getElementById('btn-manual').classList.remove('active');
+        document.getElementById('btn-auto').classList.remove('active');
+        document.getElementById('btn-hazard').classList.remove('active');
+        document.getElementById('btn-emergency-panel').classList.remove('active');
+
+        if (mode === 'manual') document.getElementById('btn-manual').classList.add('active');
+        if (mode === 'auto')   document.getElementById('btn-auto').classList.add('active');
+        if (mode === 'hazard') document.getElementById('btn-hazard').classList.add('active');
 
         const isManual = mode === 'manual' || mode === 'hazard';
-        document.getElementById('laneHint').textContent = isManual
-            ? 'Select a light state per lane'
-            : 'Switch to Manual or Hazard mode first';
 
         LANES.forEach(lane => {
-            ['red','yellow','green'].forEach(state => {
-                document.getElementById(`btn-${lane}-${state}`).disabled = !isManual;
-            });
-            document.getElementById(`btn-${lane}-emergency`).disabled = false; // always enabled
+            const btn = document.getElementById('laneBtn-' + lane);
+            btn.disabled = !isManual;
         });
 
-        document.getElementById('modeHint').textContent = `Current: ${mode.toUpperCase()}`;
+        document.getElementById('laneHint').textContent = isManual
+            ? 'Tap a lane to cycle: GREEN → RED'
+            : 'Enable Manual mode to control lanes';
+
+        document.getElementById('modeHint').textContent = 'Mode: ' + mode.toUpperCase();
     }
 
-    // ── Light Control ─────────────────────────────────────────
+    // ── Lane Button — cycles through green/red ────────────────
+    async function cycleLaneLight(lane) {
+        const next = laneStates[lane] === 'green' ? 'red' : 'green';
+        await setLight(lane, next);
+    }
+
     async function setLight(lane, state) {
         try {
             const res  = await postNode('/control/light', { lane, state });
             const data = await res.json();
-
             if (data.success) {
-                curLights[lane] = state;
-                updateLaneBadge(lane, state);
-                logActivity(`${lane} → ${state.toUpperCase()}`, 'success');
-                showToast(`✅ ${lane}: ${state.toUpperCase()}`);
+                laneStates[lane] = state;
+                updateLaneBtn(lane, state);
+                logActivity(lane + ' → ' + state.toUpperCase(), 'success');
+                showToast('✅ ' + lane + ': ' + state.toUpperCase());
             } else {
-                logActivity(`${lane} light failed: ` + (data.message || ''), 'error');
                 showToast('❌ ' + (data.message || 'Failed'), true);
+                logActivity(lane + ' light failed: ' + (data.message || ''), 'error');
             }
         } catch (e) {
-            logActivity('Cannot reach STAP Node', 'error');
             showToast('❌ Node unreachable', true);
+            logActivity('Cannot reach STAP Node', 'error');
         }
     }
 
-    function updateLaneBadge(lane, state) {
-        const badge = document.getElementById(`laneBadge-${lane}`);
-        badge.textContent = state.toUpperCase();
-        badge.className   = `ctrl-lane-badge ${state}`;
-
-        ['red','yellow','green'].forEach(s => {
-            const dot = document.getElementById(`dot-${lane}-${s}`);
-            dot.className = `ctrl-light-dot ${s === state ? s : 'off'}`;
-            document.getElementById(`btn-${lane}-${s}`).classList.toggle('active', s === state);
-        });
-
-        const card = document.getElementById(`laneCard-${lane}`);
-        card.classList.toggle('active-lane', state === 'green');
+    function updateLaneBtn(lane, state) {
+        const btn = document.getElementById('laneBtn-' + lane);
+        const lbl = document.getElementById('laneState-' + lane);
+        btn.className = 'tl-lane-btn active-' + state;
+        lbl.textContent = state.toUpperCase();
     }
 
-    // ── Emergency Override ────────────────────────────────────
-    async function triggerEmergency(lane) {
-        if (!confirm(`⚠️ Trigger EMERGENCY OVERRIDE for ${lane}?\n\nThis will immediately give ${lane} a green light.`)) return;
+    // ── Emergency Modal ───────────────────────────────────────
+    function showEmergencyPicker() {
+        document.getElementById('emergencyModal').style.display = 'flex';
+    }
 
+    function closeEmergencyModal() {
+        document.getElementById('emergencyModal').style.display = 'none';
+    }
+
+    async function triggerEmergency(lane) {
+        closeEmergencyModal();
         try {
             const res  = await postNode('/control/emergency', { lane });
             const data = await res.json();
-
             if (data.success) {
                 curMode = 'auto';
                 updateModeUI('auto');
-                logActivity(`🚨 EMERGENCY OVERRIDE — ${lane}`, 'error');
-                showToast(`🚨 Emergency: ${lane} has priority`);
+                document.getElementById('btn-emergency-panel').classList.add('active');
+                logActivity('🚨 EMERGENCY — ' + lane + ' has priority', 'error');
+                showToast('🚨 Emergency: ' + lane + ' priority lane');
             } else {
-                logActivity('Emergency failed: ' + (data.message || ''), 'error');
                 showToast('❌ ' + (data.message || 'Failed'), true);
             }
         } catch (e) {
-            logActivity('Cannot reach STAP Node', 'error');
             showToast('❌ Node unreachable', true);
+            logActivity('Cannot reach STAP Node', 'error');
         }
+    }
+
+    // ── Camera Streams ────────────────────────────────────────
+    function loadStreams() {
+        DIRS.forEach(dir => {
+            const img     = document.getElementById('stream-' + dir);
+            const offline = document.getElementById('offline-' + dir);
+            const dot     = document.getElementById('camDot-' + dir);
+
+            img.onload = () => {
+                img.style.display     = 'block';
+                offline.style.display = 'none';
+                dot.classList.add('online');
+            };
+
+            img.onerror = () => handleStreamError(img);
+            img.src     = `http://${NODE_IP}:5000/video_feed/${dir}`;
+        });
+    }
+
+    function handleStreamError(img) {
+        const dir     = img.id.replace('stream-', '');
+        const offline = document.getElementById('offline-' + dir);
+        const dot     = document.getElementById('camDot-' + dir);
+
+        img.style.display     = 'none';
+        offline.style.display = 'flex';
+        dot.classList.remove('online');
+
+        setTimeout(() => {
+            img.src = `http://${NODE_IP}:5000/video_feed/${dir}?t=` + Date.now();
+        }, 5000);
     }
 
     // ── Status Polling ────────────────────────────────────────
@@ -574,7 +817,6 @@
             renderStatusPanel(data);
             document.getElementById('lastPoll').textContent = new Date().toLocaleTimeString();
 
-            // Sync mode if node reports differently
             if (data.mode && data.mode !== curMode) {
                 curMode = data.mode;
                 updateModeUI(data.mode);
@@ -583,103 +825,97 @@
         } catch (e) {
             setNodeConnected(false);
             document.getElementById('statusPanel').innerHTML =
-                '<div style="color:#ef4444;font-size:12px;text-align:center;padding:8px 0;">⚠ Cannot reach STAP Node</div>';
+                '<div style="color:#ef4444;font-size:12px;text-align:center;padding:8px 0;">⚠ Cannot reach node</div>';
         }
     }
 
     function renderStatusPanel(data) {
-        const phaseClass = data.phase_state === 'GREEN'  ? 'ctrl-phase-green'
-                         : data.phase_state === 'YELLOW' ? 'ctrl-phase-yellow'
-                         : 'ctrl-phase-red';
+        const phaseClass = data.phase_state === 'GREEN'  ? 'tl-phase-green'
+                         : data.phase_state === 'YELLOW' ? 'tl-phase-yellow'
+                         : 'tl-phase-red';
 
         const losColors = { A:'#166534', B:'#166534', C:'#92400e', D:'#92400e', E:'#991b1b', F:'#991b1b' };
 
-        let vehicleRows = '';
+        let rows = '';
         for (const lane of LANES) {
             const count = data.vehicle_counts?.[lane] ?? 0;
             const los   = data.los?.[lane] ?? '—';
-            const color = losColors[los] || '#334155';
-            vehicleRows += `
-                <div class="ctrl-status-row">
-                    <span class="ctrl-status-label">${lane}</span>
-                    <span class="ctrl-status-value">
-                        ${count} &nbsp;<span style="color:${color};font-weight:800;">LOS ${los}</span>
-                    </span>
-                </div>`;
+            rows += `<div class="tl-status-row">
+                <span class="tl-status-label">${lane}</span>
+                <span class="tl-status-value">${count}v &nbsp;<span style="color:${losColors[los]||'#334155'};font-weight:800;">LOS ${los}</span></span>
+            </div>`;
         }
 
         document.getElementById('statusPanel').innerHTML = `
-            <div class="ctrl-status-row">
-                <span class="ctrl-status-label">Active Lane</span>
-                <span class="ctrl-status-value">${data.active_lane ?? '—'}</span>
+            <div class="tl-status-row">
+                <span class="tl-status-label">Active Lane</span>
+                <span class="tl-status-value">${data.active_lane ?? '—'}</span>
             </div>
-            <div class="ctrl-status-row">
-                <span class="ctrl-status-label">Signal</span>
-                <span class="ctrl-phase-badge ${phaseClass}">${data.phase_state ?? '—'}</span>
+            <div class="tl-status-row">
+                <span class="tl-status-label">Signal</span>
+                <span class="tl-phase-badge ${phaseClass}">${data.phase_state ?? '—'}</span>
             </div>
-            <div class="ctrl-status-row">
-                <span class="ctrl-status-label">Remaining</span>
-                <span class="ctrl-status-value">${data.remaining_secs ?? 0}s</span>
+            <div class="tl-status-row">
+                <span class="tl-status-label">Remaining</span>
+                <span class="tl-status-value">${data.remaining_secs ?? 0}s</span>
             </div>
-            <div class="ctrl-status-row">
-                <span class="ctrl-status-label">Mode</span>
-                <span class="ctrl-status-value" style="text-transform:uppercase;">${data.mode ?? '—'}</span>
+            <div class="tl-status-row">
+                <span class="tl-status-label">Mode</span>
+                <span class="tl-status-value" style="text-transform:uppercase;">${data.mode ?? '—'}</span>
             </div>
-            <div class="ctrl-status-row">
-                <span class="ctrl-status-label">Rain</span>
-                <span class="ctrl-status-value">${data.rain ? '🌧 Detected' : '☀ Clear'}</span>
+            <div class="tl-status-row">
+                <span class="tl-status-label">Rain</span>
+                <span class="tl-status-value">${data.rain ? '🌧 Detected' : '☀ Clear'}</span>
             </div>
-            <div style="margin:10px 0 4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;">Vehicle Counts</div>
-            ${vehicleRows}
+            <div style="margin:8px 0 4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;">Counts</div>
+            ${rows}
         `;
     }
 
-    // ── Node Connection Indicator ─────────────────────────────
-    function setNodeConnected(connected) {
-        const dot   = document.getElementById('nodeConnDot');
-        const label = document.getElementById('nodeConnLabel');
-        dot.className   = 'ctrl-node-dot ' + (connected ? 'connected' : 'disconnected');
-        label.textContent = connected ? 'Node Connected' : 'Node Disconnected';
+    function setNodeConnected(ok) {
+        document.getElementById('nodeConnDot').className   = 'tl-node-dot ' + (ok ? 'connected' : 'disconnected');
+        document.getElementById('nodeConnLabel').textContent = ok ? 'Node Connected' : 'Node Disconnected';
     }
 
     // ── Helpers ───────────────────────────────────────────────
     function postNode(endpoint, body) {
         return fetch(`http://${NODE_IP}:5000${endpoint}`, {
-            method:  'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(body),
-            signal:  AbortSignal.timeout(3000)
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(3000)
         });
     }
 
     function logActivity(msg, type = 'info') {
         const log   = document.getElementById('activityLog');
         const entry = document.createElement('div');
-        const time  = new Date().toLocaleTimeString();
-        entry.className   = `ctrl-log-entry ${type}`;
-        entry.textContent = `[${time}] ${msg}`;
+        entry.className   = 'tl-log-entry ' + type;
+        entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
         log.prepend(entry);
-        // Keep max 50 entries
         while (log.children.length > 50) log.removeChild(log.lastChild);
     }
 
     function clearLog() {
-        document.getElementById('activityLog').innerHTML =
-            '<div class="ctrl-log-entry info">Log cleared.</div>';
+        document.getElementById('activityLog').innerHTML = '<div class="tl-log-entry info">Log cleared.</div>';
     }
 
     let toastTimer = null;
-    function showToast(msg, isError = false) {
-        const toast = document.getElementById('toast');
-        toast.textContent = msg;
-        toast.className   = 'ctrl-toast show' + (isError ? ' toast-error' : '');
+    function showToast(msg, isErr = false) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'tl-toast show' + (isErr ? ' toast-err' : '');
         if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
     }
 
     // ── Init ──────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
-        if (NODE_IP) startStatusPolling();
+        updateModeUI('auto');
+        if (NODE_IP) {
+            loadStreams();
+            startStatusPolling();
+        }
     });
 </script>
 @endpush
