@@ -1,921 +1,919 @@
 @extends('layouts.admin')
+
 @section('title', 'Traffic Light Control')
 @section('page-title', 'Traffic Light Control')
 
 @push('styles')
 <style>
-    /* ── Base ─────────────────────────────────────────────────── */
-    .tl-page { display: flex; flex-direction: column; gap: 1.25rem; }
+/* ================================================================
+   STAP HUB — Traffic Light Control Page
+   Mirrors ESP32 firmware v7 transition logic exactly:
+     MANUAL green switch → YELLOW on current lane (3s) → GREEN new lane
+     HAZARD  → MODE:HAZARD + HAZARD:x4 → all red, no active lane
+     AUTO    → MODE:AUTO, Python takes over
+================================================================ */
 
-    /* ── Node IP Bar ─────────────────────────────────────────── */
-    .tl-ip-bar {
-        background: #1a1a2e;
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 12px;
-        padding: 10px 18px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        font-size: 12px;
-        color: rgba(255,255,255,.6);
-    }
+/* ── Layout ───────────────────────────────────────────────────── */
+.tl-root {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    align-items: start;
+}
+@media (max-width: 1140px) { .tl-root { grid-template-columns: 1fr; } }
 
-    .tl-ip-bar input {
-        background: rgba(255,255,255,.07);
-        border: 1.5px solid rgba(255,255,255,.15);
-        border-radius: 7px;
-        padding: 5px 12px;
-        font-size: 12px;
-        font-family: monospace;
-        width: 160px;
-        color: #fff;
-        outline: none;
-    }
+/* ── Feed ─────────────────────────────────────────────────────── */
+.tl-feed {
+    position: relative;
+    background: #0d1220;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    min-height: 340px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.32);
+}
+.tl-feed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+.tl-feed-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: rgba(255,255,255,.2);
+}
+.tl-feed-placeholder svg { width: 52px; height: 52px; }
+.tl-feed-placeholder span { font-size: 13px; font-weight: 600; letter-spacing: .5px; }
+.tl-feed-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(8,14,28,.72);
+    backdrop-filter: blur(6px);
+    border-radius: 8px;
+    padding: 6px 13px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .3px;
+    pointer-events: none;
+}
+.tl-feed-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #29B357;
+    animation: pulse-dot 1.8s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+    0%,100% { box-shadow: 0 0 0 0 rgba(41,179,87,.6); }
+    50%      { box-shadow: 0 0 0 5px rgba(41,179,87,0); }
+}
 
-    .tl-ip-bar input:focus { border-color: rgba(255,255,255,.4); }
+/* ── Right column ─────────────────────────────────────────────── */
+.tl-right { display: flex; flex-direction: column; gap: 16px; }
 
-    .tl-ip-bar button {
-        background: rgba(255,255,255,.1);
-        color: #fff;
-        border: 1px solid rgba(255,255,255,.15);
-        border-radius: 7px;
-        padding: 5px 14px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background .15s;
-    }
+/* ── Shared card ──────────────────────────────────────────────── */
+.tl-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+.tl-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+.tl-card-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: .1px;
+}
+.tl-card-body { padding: 20px; }
 
-    .tl-ip-bar button:hover { background: rgba(255,255,255,.18); }
+/* ── Mode badge ───────────────────────────────────────────────── */
+.tl-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 11px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+.tl-badge-auto      { background: rgba(41,179,87,.14); color: #1a7a3a; }
+.tl-badge-manual    { background: rgba(244,185,66,.18); color: #7a5000; }
+.tl-badge-emergency { background: rgba(224,48,64,.14); color: #9a1020; }
 
-    .tl-node-indicator {
-        margin-left: auto;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        color: rgba(255,255,255,.7);
-    }
+/* ── Mode buttons ─────────────────────────────────────────────── */
+.tl-mode-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+.tl-mode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 18px 10px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: var(--bg-input);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .18s ease;
+    min-height: 96px;
+}
+.tl-mode-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.tl-mode-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
-    .tl-node-dot {
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: #475569;
-        transition: background .3s;
-    }
+.tl-mode-btn .tl-mode-icon {
+    /* SVG container */
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.tl-mode-btn .tl-mode-icon svg { width: 26px; height: 26px; }
+.tl-mode-btn .tl-mode-name {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--navy);
+}
+.tl-mode-btn .tl-mode-desc {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.35;
+}
 
-    .tl-node-dot.connected    { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.25); }
-    .tl-node-dot.disconnected { background: #ef4444; }
+/* Active states */
+.tl-mode-btn.sel-auto {
+    border-color: #29B357;
+    background: rgba(41,179,87,.08);
+}
+.tl-mode-btn.sel-auto .tl-mode-name { color: #1a7a3a; }
+.tl-mode-btn.sel-auto .tl-mode-icon svg { stroke: #1a7a3a; }
 
-    /* ── Main Layout ─────────────────────────────────────────── */
-    .tl-main {
-        display: grid;
-        grid-template-columns: 1fr 1fr 320px;
-        gap: 1.25rem;
-        align-items: start;
-    }
+.tl-mode-btn.sel-manual {
+    border-color: #F4B942;
+    background: rgba(244,185,66,.10);
+}
+.tl-mode-btn.sel-manual .tl-mode-name { color: #7a5000; }
+.tl-mode-btn.sel-manual .tl-mode-icon svg { stroke: #7a5000; }
 
-    @media (max-width: 1100px) { .tl-main { grid-template-columns: 1fr 320px; } }
-    @media (max-width: 760px)  { .tl-main { grid-template-columns: 1fr; } }
+.tl-mode-btn.sel-emergency {
+    border-color: #E03040;
+    background: rgba(224,48,64,.10);
+    animation: emg-card-pulse 1.3s ease-in-out infinite;
+}
+.tl-mode-btn.sel-emergency .tl-mode-name { color: #9a1020; }
+.tl-mode-btn.sel-emergency .tl-mode-icon svg { stroke: #9a1020; }
+@keyframes emg-card-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(224,48,64,.3); }
+    50%      { box-shadow: 0 0 0 7px rgba(224,48,64,0); }
+}
 
-    /* ── Card ────────────────────────────────────────────────── */
-    .tl-card {
-        background: #fff;
-        border-radius: 14px;
-        border: 1px solid rgba(15,23,42,.08);
-        box-shadow: 0 4px 18px rgba(15,23,42,.07);
-        overflow: hidden;
-    }
+/* ── Emergency banner ─────────────────────────────────────────── */
+.tl-emg-banner {
+    display: none;
+    align-items: center;
+    gap: 11px;
+    padding: 14px 16px;
+    background: rgba(224,48,64,.09);
+    border: 2px solid rgba(224,48,64,.3);
+    border-radius: 10px;
+    margin-bottom: 18px;
+}
+.tl-emg-banner.on { display: flex; }
+.tl-emg-dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: #E03040;
+    flex-shrink: 0;
+    animation: emg-dot 0.8s ease-in-out infinite;
+}
+@keyframes emg-dot {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.5); opacity: .5; }
+}
+.tl-emg-banner-text { flex: 1; min-width: 0; }
+.tl-emg-banner-title { font-size: 14px; font-weight: 800; color: #9a1020; line-height: 1; }
+.tl-emg-banner-sub   { font-size: 12px; font-weight: 500; color: #9a1020; opacity: .8; margin-top: 4px; }
 
-    .tl-card-header {
-        padding: .8rem 1.2rem;
-        border-bottom: 1px solid rgba(15,23,42,.07);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: .5rem;
-    }
+/* ── Lane cards ───────────────────────────────────────────────── */
+.tl-divider {
+    border: none; border-top: 1px solid var(--border); margin: 4px 0 18px;
+}
+.tl-lane-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    font-weight: 500;
+}
+.tl-lanes { display: flex; flex-direction: column; gap: 11px; }
 
-    .tl-card-title {
-        font-size: .85rem;
-        font-weight: 800;
-        color: #0f172a;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-    }
+.tl-lane {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: var(--bg-input);
+    transition: border-color .2s, background .2s;
+}
+.tl-lane.is-green {
+    border-color: #29B357;
+    background: rgba(41,179,87,.06);
+}
+.tl-lane.is-yellow {
+    border-color: #F4B942;
+    background: rgba(244,185,66,.07);
+}
+.tl-lane.is-red-emg {
+    border-color: rgba(224,48,64,.45);
+    background: rgba(224,48,64,.05);
+}
 
-    .tl-card-body { padding: 1.2rem; }
+/* Lane top row */
+.tl-lane-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
 
-    /* ── CONTROL BOX panel ───────────────────────────────────── */
-    .tl-controlbox {
-        background: #d1d5db;
-        border-radius: 16px;
-        border: 3px solid #9ca3af;
-        padding: 1.5rem 1.25rem 1.25rem;
-        box-shadow: inset 0 2px 6px rgba(0,0,0,.15), 0 8px 24px rgba(0,0,0,.12);
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-    }
+.tl-lane-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+}
+.tl-lane-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    font-weight: 500;
+}
 
-    .tl-controlbox-label {
-        font-size: .65rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: .12em;
-        color: #374151;
-        margin-bottom: .5rem;
-        text-align: center;
-    }
+/* Signal light display */
+.tl-signal {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #111820;
+    border-radius: 30px;
+    padding: 7px 16px;
+    flex-shrink: 0;
+}
+.tl-sig-dot {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    opacity: .16;
+    transition: opacity .3s, box-shadow .3s;
+}
+.tl-sig-dot.r { background: #E03040; }
+.tl-sig-dot.y { background: #F4B942; }
+.tl-sig-dot.g { background: #29B357; }
 
-    /* ── Mode Row (top of control box) ──────────────────────── */
-    .tl-mode-row {
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-        justify-content: center;
-    }
+.tl-sig-dot.lit-r { opacity: 1; box-shadow: 0 0 11px 2px rgba(224,48,64,.65); }
+.tl-sig-dot.lit-y { opacity: 1; box-shadow: 0 0 11px 2px rgba(244,185,66,.65); animation: blink-y .7s ease-in-out infinite; }
+.tl-sig-dot.lit-g { opacity: 1; box-shadow: 0 0 11px 2px rgba(41,179,87,.65); }
+@keyframes blink-y {
+    0%,100% { opacity: 1; }
+    50%      { opacity: .22; }
+}
 
-    /* Square MANUAL button */
-    .tl-btn-manual {
-        width: 64px; height: 64px;
-        border-radius: 10px;
-        background: linear-gradient(145deg, #374151, #1f2937);
-        border: 3px solid #111827;
-        box-shadow: 0 4px 0 #111, inset 0 1px 0 rgba(255,255,255,.1);
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        color: rgba(255,255,255,.6);
-        font-size: .6rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        transition: all .12s;
-        position: relative;
-    }
+/* Lane action button */
+.tl-lane-btn {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    cursor: pointer;
+    transition: all .18s ease;
+    background: rgba(41,179,87,.11);
+    border-color: rgba(41,179,87,.28);
+    color: #1a7a3a;
+}
+.tl-lane-btn:hover:not(:disabled):not(.btn-active):not(.btn-transitioning) {
+    background: rgba(41,179,87,.20);
+    border-color: #29B357;
+    transform: translateY(-1px);
+}
+.tl-lane-btn.btn-active {
+    background: #29B357;
+    border-color: #1d9047;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(41,179,87,.38);
+    cursor: default;
+}
+.tl-lane-btn.btn-transitioning {
+    /* Yellow blink — mirrors ESP32 MAN_TRANSITION */
+    background: rgba(244,185,66,.14);
+    border-color: #F4B942;
+    color: #7a5000;
+    animation: btn-blink-y .7s ease-in-out infinite;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+@keyframes btn-blink-y {
+    0%,100% { background: rgba(244,185,66,.22); border-color: #F4B942; }
+    50%      { background: rgba(244,185,66,.05); border-color: rgba(244,185,66,.35); }
+}
+.tl-lane-btn:disabled:not(.btn-active):not(.btn-transitioning) {
+    opacity: .38;
+    cursor: not-allowed;
+    transform: none;
+    background: rgba(27,39,68,.07);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+.tl-lane-btn-sub {
+    font-size: 11px;
+    text-align: center;
+    color: var(--text-muted);
+    min-height: 17px;
+    margin-top: 6px;
+    font-weight: 600;
+    letter-spacing: .2px;
+}
 
-    .tl-btn-manual:hover { transform: translateY(-1px); box-shadow: 0 5px 0 #111, inset 0 1px 0 rgba(255,255,255,.15); }
-    .tl-btn-manual:active { transform: translateY(2px); box-shadow: 0 2px 0 #111; }
-    .tl-btn-manual.active {
-        background: linear-gradient(145deg, #1e3a5f, #1e40af);
-        border-color: #1d4ed8;
-        color: #fff;
-        box-shadow: 0 0 0 3px rgba(59,130,246,.4), 0 4px 0 #1e3a5f;
-    }
-
-    /* Round colored mode buttons */
-    .tl-btn-round {
-        width: 56px; height: 56px;
-        border-radius: 50%;
-        border: 3px solid transparent;
-        box-shadow: 0 4px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25);
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        font-size: .55rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        color: rgba(255,255,255,.85);
-        transition: all .12s;
-    }
-
-    .tl-btn-round:hover { transform: translateY(-2px); filter: brightness(1.1); }
-    .tl-btn-round:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
-
-    /* STAP Mode — blue */
-    .tl-btn-stap {
-        background: radial-gradient(circle at 35% 35%, #60a5fa, #2563eb);
-        border-color: #1d4ed8;
-    }
-
-    .tl-btn-stap.active {
-        box-shadow: 0 0 0 4px rgba(59,130,246,.45), 0 4px 0 #1e3a5f;
-    }
-
-    /* Hazard — orange */
-    .tl-btn-hazard {
-        background: radial-gradient(circle at 35% 35%, #fb923c, #ea580c);
-        border-color: #c2410c;
-    }
-
-    .tl-btn-hazard.active {
-        box-shadow: 0 0 0 4px rgba(249,115,22,.45), 0 4px 0 #7c2d12;
-    }
-
-    /* Emergency — red */
-    .tl-btn-emergency-mode {
-        background: radial-gradient(circle at 35% 35%, #f87171, #dc2626);
-        border-color: #b91c1c;
-    }
-
-    .tl-btn-emergency-mode.active {
-        box-shadow: 0 0 0 4px rgba(239,68,68,.45), 0 4px 0 #7f1d1d;
-        animation: emergencyPulse 1s infinite;
-    }
-
-    @keyframes emergencyPulse {
-        0%, 100% { box-shadow: 0 0 0 4px rgba(239,68,68,.45), 0 4px 0 #7f1d1d; }
-        50%       { box-shadow: 0 0 0 8px rgba(239,68,68,.2),  0 4px 0 #7f1d1d; }
-    }
-
-    /* ── Lane Buttons (green circles) ───────────────────────── */
-
-
-    .tl-lane-compass {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: .65rem;
-        max-width: 240px;
-        margin: 0 auto;
-    }
-
-    .tl-lane-btn {
-        aspect-ratio: 1;
-        border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #4ade80, #16a34a);
-        border: 3px solid #15803d;
-        box-shadow: 0 4px 0 #14532d, inset 0 1px 0 rgba(255,255,255,.3);
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        color: rgba(255,255,255,.9);
-        font-size: .7rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: .06em;
-        transition: all .12s;
-        min-width: 72px;
-        min-height: 72px;
-    }
-
-    .tl-lane-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
-    .tl-lane-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #14532d; }
-    .tl-lane-btn:disabled { opacity: .35; cursor: not-allowed; filter: grayscale(.6); }
-
-    .tl-lane-btn.active-green {
-        background: radial-gradient(circle at 35% 35%, #86efac, #22c55e);
-        box-shadow: 0 0 0 4px rgba(34,197,94,.4), 0 4px 0 #14532d;
-    }
-
-    .tl-lane-btn.active-red {
-        background: radial-gradient(circle at 35% 35%, #f87171, #dc2626);
-        border-color: #b91c1c;
-        box-shadow: 0 0 0 4px rgba(239,68,68,.3), 0 4px 0 #7f1d1d;
-    }
-
-    .tl-lane-btn.active-yellow {
-        background: radial-gradient(circle at 35% 35%, #fde047, #eab308);
-        border-color: #a16207;
-        box-shadow: 0 0 0 4px rgba(234,179,8,.3), 0 4px 0 #713f12;
-        color: #1a0a00;
-    }
-
-    .tl-lane-icon { font-size: 1rem; }
-
-    /* ── Divider in control box ──────────────────────────────── */
-    .tl-divider {
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #9ca3af, transparent);
-        border-radius: 2px;
-    }
-
-    /* ── Camera Grid ─────────────────────────────────────────── */
-    .tl-cam-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: .75rem;
-    }
-
-    .tl-cam-cell {
-        border-radius: 10px;
-        overflow: hidden;
-        background: #0f172a;
-        border: 1px solid rgba(255,255,255,.06);
-        position: relative;
-        aspect-ratio: 16/9;
-    }
-
-    .tl-cam-cell img.mjpeg {
-        width: 100%; height: 100%;
-        object-fit: cover;
-        display: none;
-    }
-
-    .tl-cam-offline {
-        position: absolute; inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        color: rgba(255,255,255,.25);
-        font-size: .65rem;
-        font-weight: 600;
-        text-align: center;
-    }
-
-    .tl-cam-dir-tag {
-        position: absolute;
-        top: 5px; left: 5px;
-        background: rgba(15,23,42,.75);
-        color: rgba(255,255,255,.9);
-        font-size: .6rem;
-        font-weight: 800;
-        padding: 2px 7px;
-        border-radius: 5px;
-        letter-spacing: .06em;
-        backdrop-filter: blur(4px);
-    }
-
-    .tl-cam-status-dot {
-        position: absolute;
-        top: 6px; right: 6px;
-        width: 7px; height: 7px;
-        border-radius: 50%;
-        background: #ef4444;
-    }
-
-    .tl-cam-status-dot.online { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
-
-    /* ── Sidebar ─────────────────────────────────────────────── */
-    .tl-sidebar { display: flex; flex-direction: column; gap: 1rem; }
-
-    /* ── Status Panel ────────────────────────────────────────── */
-    .tl-status-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 6px 0;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 12px;
-    }
-
-    .tl-status-row:last-child { border-bottom: none; }
-    .tl-status-label { color: #64748b; font-weight: 600; }
-    .tl-status-value { font-weight: 700; color: #0f172a; }
-
-    .tl-phase-badge {
-        padding: 2px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-
-    .tl-phase-green  { background: #dcfce7; color: #166534; }
-    .tl-phase-yellow { background: #fef3c7; color: #92400e; }
-    .tl-phase-red    { background: #fee2e2; color: #991b1b; }
-
-    /* ── Activity Log ────────────────────────────────────────── */
-    .tl-log {
-        max-height: 200px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: .35rem;
-    }
-
-    .tl-log-entry {
-        font-size: .72rem;
-        padding: .35rem .6rem;
-        border-radius: 6px;
-        background: #f8fafc;
-        border-left: 3px solid #e2e8f0;
-        color: #475569;
-        line-height: 1.4;
-    }
-
-    .tl-log-entry.success { border-left-color: #22c55e; }
-    .tl-log-entry.error   { border-left-color: #ef4444; }
-    .tl-log-entry.info    { border-left-color: #3b82f6; }
-
-    /* ── Toast ───────────────────────────────────────────────── */
-    .tl-toast {
-        position: fixed;
-        bottom: 1.5rem; right: 1.5rem;
-        background: #0f172a;
-        color: #fff;
-        padding: .75rem 1.25rem;
-        border-radius: .75rem;
-        font-size: .85rem;
-        font-weight: 600;
-        box-shadow: 0 8px 24px rgba(15,23,42,.3);
-        z-index: 9999;
-        transform: translateY(130%);
-        transition: transform .25s;
-        max-width: 280px;
-    }
-
-    .tl-toast.show       { transform: translateY(0); }
-    .tl-toast.toast-err  { background: #991b1b; }
-
-    /* ── Mode hint strip ─────────────────────────────────────── */
-    .tl-mode-hint {
-        text-align: center;
-        font-size: .7rem;
-        font-weight: 700;
-        color: #6b7280;
-        letter-spacing: .04em;
-        text-transform: uppercase;
-        margin-top: -.25rem;
-    }
-
-    .tl-btn-label {
-        font-size: .55rem;
-        font-weight: 800;
-        letter-spacing: .05em;
-        text-transform: uppercase;
-        line-height: 1;
-    }
+/* ── Activity log (below lane cards on right column, full-width) ─ */
+.tl-log { max-height: 200px; overflow-y: auto; }
+.tl-log::-webkit-scrollbar { width: 4px; }
+.tl-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.tl-log-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+.tl-log-entry:last-child { border-bottom: none; }
+.tl-log-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.tl-log-msg  { flex: 1; color: var(--text-secondary); font-weight: 500; }
+.tl-log-msg.err  { color: #9a1020; }
+.tl-log-msg.warn { color: #7a5000; }
+.tl-log-empty { font-size: 13px; color: var(--text-muted); padding: 10px 0; text-align: center; }
 </style>
 @endpush
 
 @section('content')
 
-{{-- Node IP Bar --}}
-<div class="tl-page">
-<div class="tl-ip-bar">
-    <span>⚙️ STAP Node IP:</span>
-    <input type="text" id="nodeIpInput" value="192.168.1.100" placeholder="e.g. 192.168.1.50">
-    <button onclick="applyNodeIp()">Apply</button>
-    <span id="nodeIpMsg" style="font-size:11px;color:#22c55e;"></span>
-    <div class="tl-node-indicator">
-        <span class="tl-node-dot" id="nodeConnDot"></span>
-        <span id="nodeConnLabel">Connecting...</span>
+<div class="tl-root">
+
+    {{-- ── LEFT: Live feeds ────────────────────────────────────────── --}}
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+        {{-- Primary feed (first active camera) --}}
+        <div>
+            <div class="tl-section-label" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:10px;">
+                Intersection Live View
+            </div>
+            <div class="tl-feed" id="primaryFeed">
+                <div class="tl-feed-placeholder" id="feedPlaceholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <rect x="2" y="7" width="15" height="10" rx="2"/>
+                        <path d="M17 9l5-3v12l-5-3"/>
+                    </svg>
+                    <span>Connecting to camera feed…</span>
+                </div>
+                <div class="tl-feed-badge">
+                    <span class="tl-feed-dot"></span>
+                    Mayor Gil Fernando Ave — LIVE
+                </div>
+            </div>
+        </div>
+
+        {{-- Secondary 2×2 camera grid --}}
+        <div>
+            <div class="tl-section-label" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:10px;">
+                All Camera Views
+            </div>
+            <div id="cameraGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                @for($i = 0; $i < 4; $i++)
+                <div style="background:#0d1220;border-radius:8px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;">
+                    <span style="font-size:11px;color:rgba(255,255,255,.18);font-weight:600;">Loading…</span>
+                </div>
+                @endfor
+            </div>
+        </div>
+
+        {{-- Node status strip --}}
+        <div id="nodeStrip" style="display:flex;flex-direction:column;gap:8px;"></div>
+
     </div>
-</div>
 
-<div class="tl-main">
+    {{-- ── RIGHT: Control panel ─────────────────────────────────────── --}}
+    <div class="tl-right">
 
-    {{-- Col 1: Control Box --}}
-    <div>
+        {{-- Mode selector --}}
         <div class="tl-card">
-            <div class="tl-card-header">
-                <span class="tl-card-title">Control Panel</span>
-                <span style="font-size:.72rem;color:#94a3b8;" id="modeHint">Select a mode</span>
+            <div class="tl-card-head">
+                <span class="tl-card-title">Operating Mode</span>
+                <span class="tl-badge tl-badge-auto" id="modeBadge">Auto</span>
             </div>
             <div class="tl-card-body">
-                <div class="tl-controlbox">
 
-                    {{-- Mode Buttons --}}
-                    <div>
-                        <div class="tl-controlbox-label">System Mode</div>
-                        <div class="tl-mode-row">
+                <div class="tl-mode-row">
 
-                            {{-- Square: Manual --}}
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-                                <button class="tl-btn-manual" id="btn-manual" onclick="setMode('manual')" title="Manual Override">
-                                    <span style="font-size:1.2rem;">🕹️</span>
-                                    <span class="tl-btn-label">Manual</span>
-                                </button>
-                            </div>
+                    <button class="tl-mode-btn sel-auto" id="btn-mode-auto" onclick="selectMode('auto')">
+                        <span class="tl-mode-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                        </span>
+                        <span class="tl-mode-name">Auto</span>
+                        <span class="tl-mode-desc">AI controls the cycle</span>
+                    </button>
 
-                            {{-- Round: STAP (Auto) --}}
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-                                <button class="tl-btn-round tl-btn-stap active" id="btn-auto" onclick="setMode('auto')" title="STAP Auto Mode">
-                                    <span style="font-size:1rem;">🤖</span>
-                                    <span class="tl-btn-label">STAP</span>
-                                </button>
-                            </div>
+                    <button class="tl-mode-btn" id="btn-mode-manual" onclick="selectMode('manual')">
+                        <span class="tl-mode-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+                                <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+                                <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+                                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+                            </svg>
+                        </span>
+                        <span class="tl-mode-name">Manual</span>
+                        <span class="tl-mode-desc">Select which lane gets green</span>
+                    </button>
 
-                            {{-- Round: Hazard --}}
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-                                <button class="tl-btn-round tl-btn-hazard" id="btn-hazard" onclick="setMode('hazard')" title="Hazard Mode">
-                                    <span style="font-size:1rem;">⚠️</span>
-                                    <span class="tl-btn-label">Hazard</span>
-                                </button>
-                            </div>
-
-                            {{-- Round: Emergency --}}
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-                                <button class="tl-btn-round tl-btn-emergency-mode" id="btn-emergency-panel" onclick="showEmergencyPicker()" title="Emergency Override">
-                                    <span style="font-size:1rem;">🚨</span>
-                                    <span class="tl-btn-label">Emergency</span>
-                                </button>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <div class="tl-divider"></div>
-
-                    {{-- Lane Buttons --}}
-                    <div class="tl-lane-section">
-                        <div class="tl-controlbox-label">Lane Control</div>
-                        <div class="tl-lane-compass">
-@foreach ([
-    ['lane' => 'NORTH', 'icon' => '↑'],
-    ['lane' => 'EAST',  'icon' => '→'],
-    ['lane' => 'WEST',  'icon' => '←'],
-    ['lane' => 'SOUTH', 'icon' => '↓'],
-] as $l)
-<button
-    class="tl-lane-btn"
-    id="laneBtn-{{ $l['lane'] }}"
-    data-lane="{{ $l['lane'] }}"
-    onclick="cycleLaneLight(this.dataset.lane)"
-    disabled
-    title="{{ $l['lane'] }} Lane"
->
-    <span class="tl-lane-icon">{{ $l['icon'] }}</span>
-    <span class="tl-btn-label">{{ $l['lane'] }}</span>
-    <span style="font-size:.5rem;opacity:.8;" id="laneState-{{ $l['lane'] }}">RED</span>
-</button>
-@endforeach
-                        </div>
-                        <div class="tl-mode-hint" style="margin-top:.75rem;" id="laneHint">Enable Manual mode to control lanes</div>
-                    </div>
+                    <button class="tl-mode-btn" id="btn-mode-emergency" onclick="selectMode('emergency')">
+                        <span class="tl-mode-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                        </span>
+                        <span class="tl-mode-name">Emergency</span>
+                        <span class="tl-mode-desc">All lanes stop immediately</span>
+                    </button>
 
                 </div>
+
+                {{-- Emergency active banner --}}
+                <div class="tl-emg-banner" id="emgBanner">
+                    <span class="tl-emg-dot"></span>
+                    <div class="tl-emg-banner-text">
+                        <div class="tl-emg-banner-title">Emergency Mode Active</div>
+                        <div class="tl-emg-banner-sub">All lanes are RED. Switch to Auto or Manual to resume.</div>
+                    </div>
+                </div>
+
+                <hr class="tl-divider">
+
+                {{-- Lane controls --}}
+                <div class="tl-lane-hint" id="laneHint">Enable Manual mode to control individual lanes.</div>
+                <div class="tl-lanes" id="laneList">
+                    <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:20px 0;">Loading lanes…</div>
+                </div>
+
             </div>
         </div>
-    </div>
 
-    {{-- Col 2: Camera Feeds --}}
-    <div>
-        <div class="tl-card" style="background:#0f172a;">
-            <div class="tl-card-header" style="background:#0f172a;border-bottom-color:rgba(255,255,255,.07);">
-                <span class="tl-card-title" style="color:#fff;">Live Feeds</span>
-                <div style="display:flex;align-items:center;gap:.4rem;">
-                    <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:livePulse 1.6s infinite;"></span>
-                    <span style="font-size:.72rem;color:rgba(255,255,255,.5);">4 cameras</span>
-                </div>
-            </div>
-            <div class="tl-card-body" style="padding:.875rem;">
-                <div class="tl-cam-grid">
-                    @foreach (['NORTH','SOUTH','EAST','WEST'] as $dir)
-                    <div class="tl-cam-cell">
-                        <img class="mjpeg" id="stream-{{ strtolower($dir) }}" src="" alt="{{ $dir }}" onerror="handleStreamError(this)">
-                        <div class="tl-cam-offline" id="offline-{{ strtolower($dir) }}">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                            <span>Offline</span>
-                        </div>
-                        <span class="tl-cam-dir-tag">{{ $dir }}</span>
-                        <span class="tl-cam-status-dot" id="camDot-{{ strtolower($dir) }}"></span>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Col 3: Sidebar --}}
-    <div class="tl-sidebar">
-
-        {{-- Live Status --}}
+        {{-- Activity log --}}
         <div class="tl-card">
-            <div class="tl-card-header">
-                <span class="tl-card-title">📡 Live Status</span>
-                <span style="font-size:.68rem;color:#94a3b8;" id="lastPoll">—</span>
+            <div class="tl-card-head">
+                <span class="tl-card-title">Activity Log</span>
+                <button onclick="clearLog()" style="font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;font-weight:600;">Clear</button>
             </div>
-            <div class="tl-card-body" id="statusPanel">
-                <div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px 0;">Waiting for node...</div>
-            </div>
-        </div>
-
-        {{-- Activity Log --}}
-        <div class="tl-card">
-            <div class="tl-card-header">
-                <span class="tl-card-title">📋 Log</span>
-                <button onclick="clearLog()" style="font-size:.68rem;color:#94a3b8;background:none;border:none;cursor:pointer;">Clear</button>
-            </div>
-            <div class="tl-card-body" style="padding:.75rem;">
+            <div class="tl-card-body" style="padding:12px 20px;">
                 <div class="tl-log" id="activityLog">
-                    <div class="tl-log-entry info">Panel loaded. Set Node IP to begin.</div>
+                    <div class="tl-log-empty">No actions yet this session.</div>
                 </div>
             </div>
         </div>
 
     </div>
 </div>
-</div>
-
-{{-- Emergency Lane Picker Modal --}}
-<div id="emergencyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:16px;padding:2rem;max-width:340px;width:90%;text-align:center;box-shadow:0 24px 48px rgba(0,0,0,.3);">
-        <div style="font-size:2rem;margin-bottom:.5rem;">🚨</div>
-        <div style="font-size:1rem;font-weight:800;color:#0f172a;margin-bottom:.35rem;">Emergency Override</div>
-        <div style="font-size:.82rem;color:#64748b;margin-bottom:1.25rem;">Select the lane that needs immediate green light access.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:1rem;">
-            @foreach (['NORTH','SOUTH','EAST','WEST'] as $dir)
-            <button onclick="triggerEmergency('{{ $dir }}')"
-                style="padding:.75rem;background:#fff1f2;border:2px solid #fca5a5;border-radius:10px;color:#991b1b;font-size:.85rem;font-weight:800;cursor:pointer;transition:background .15s;"
-                onmouseover="this.style.background='#fca5a5'" onmouseout="this.style.background='#fff1f2'">
-                {{ $dir }}
-            </button>
-            @endforeach
-        </div>
-        <button onclick="closeEmergencyModal()"
-            style="width:100%;padding:.6rem;background:#f1f5f9;border:none;border-radius:8px;color:#64748b;font-size:.82rem;font-weight:600;cursor:pointer;">
-            Cancel
-        </button>
-    </div>
-</div>
-
-{{-- Toast --}}
-<div class="tl-toast" id="toast"></div>
 
 @endsection
 
 @push('scripts')
-<style>
-@keyframes livePulse {
-    0%,100% { box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
-    50%      { box-shadow: 0 0 0 6px rgba(34,197,94,.06); }
-}
-</style>
 <script>
-    // ── Config ────────────────────────────────────────────────
-    let NODE_IP  = localStorage.getItem('stap_node_ip') || '192.168.1.100';
-    let curMode  = 'auto';
-    const LANES  = ['NORTH','SOUTH','EAST','WEST'];
-    const DIRS   = ['north','south','east','west'];
+/* ================================================================
+   STAP Hub — Traffic Light Control
+   Mirrors ESP32 firmware v7 transition behaviour precisely.
 
-    // Lane state cycle: green → red (clicking toggles)
-    const laneStates = { NORTH: 'red', SOUTH: 'red', EAST: 'red', WEST: 'red' };
+   ESP32 MANUAL transition sequence (handleManual / MAN_TRANSITION):
+     1. Press "Set Green" on target lane
+     2. Previously-green lane → YELLOW signal (3s countdown) [setTransitionLights]
+     3. After 3s → target lane gets GREEN [setNorthGo/setSouthGo/etc.]
 
-    document.getElementById('nodeIpInput').value = NODE_IP;
+   Web UI replicates this:
+     1. User clicks target lane button
+     2. UI immediately sends MANUAL_LIGHT:PREVLANE,YELLOW to Laravel API
+        (which proxies to the Node's /control/light endpoint)
+     3. Previous lane button blinks yellow; target lane button blinks yellow
+     4. After YELLOW_TIME seconds: sends MANUAL_LIGHT:NEWLANE,GREEN
+     5. UI updates to show new green lane
 
-    // ── Apply IP ──────────────────────────────────────────────
-    function applyNodeIp() {
-        NODE_IP = document.getElementById('nodeIpInput').value.trim();
-        localStorage.setItem('stap_node_ip', NODE_IP);
-        const msg = document.getElementById('nodeIpMsg');
-        msg.textContent = '✅ Applied';
-        setTimeout(() => msg.textContent = '', 2000);
-        loadStreams();
-        startStatusPolling();
-        logActivity('Node IP set to ' + NODE_IP, 'info');
-    }
+   EMERGENCY (MODE:HAZARD):
+     Sends MODE:HAZARD (no specific lane).
+     All lanes snap to red on the ESP32 via its HAZARD branch.
+     No yellow transition — instant all-red.
 
-    // ── Mode Control ──────────────────────────────────────────
-    async function setMode(mode) {
-        try {
-            const res  = await postNode('/control/mode', { mode });
-            const data = await res.json();
-            if (data.success) {
-                curMode = mode;
-                updateModeUI(mode);
-                logActivity('Mode → ' + mode.toUpperCase(), 'success');
-                showToast('✅ ' + mode.toUpperCase() + ' mode active');
-            } else {
-                showToast('❌ ' + (data.message || 'Failed'), true);
-                logActivity('Mode switch failed: ' + (data.message || ''), 'error');
-            }
-        } catch (e) {
-            showToast('❌ Node unreachable', true);
-            logActivity('Cannot reach STAP Node', 'error');
-        }
-    }
+   AUTO (MODE:AUTO):
+     Returns control to Python/AI. No lane selection on web UI.
+================================================================ */
 
-    function updateModeUI(mode) {
-        // Reset all mode buttons
-        document.getElementById('btn-manual').classList.remove('active');
-        document.getElementById('btn-auto').classList.remove('active');
-        document.getElementById('btn-hazard').classList.remove('active');
-        document.getElementById('btn-emergency-panel').classList.remove('active');
+const YELLOW_TIME_MS = 3000; // Must match ESP32 YELLOW_TIME = 3s
 
-        if (mode === 'manual') document.getElementById('btn-manual').classList.add('active');
-        if (mode === 'auto')   document.getElementById('btn-auto').classList.add('active');
-        if (mode === 'hazard') document.getElementById('btn-hazard').classList.add('active');
+// ── State ──────────────────────────────────────────────────────
+let currentMode         = 'auto';     // 'auto' | 'manual' | 'emergency'
+let lights              = [];         // fetched from /admin/api/traffic-lights
+let activeLaneId        = null;       // light_id currently GREEN
+let transitioningToId   = null;       // light_id we are transitioning TO
+let prevActiveLaneId    = null;       // light_id that is currently turning YELLOW
+let transitionTimer     = null;
+let countdownInterval   = null;
+let countdown           = 0;
+const sessionLog        = [];
 
-        const isManual = mode === 'manual' || mode === 'hazard';
+// ── Boot ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    loadCameras();
+    loadLights();
+    setInterval(loadLights, 25000); // background refresh
+});
 
-        LANES.forEach(lane => {
-            const btn = document.getElementById('laneBtn-' + lane);
-            btn.disabled = !isManual;
-        });
+// ── Camera feed ────────────────────────────────────────────────
+async function loadCameras() {
+    try {
+        const res  = await fetch('/admin/api/cameras', { headers: authHeaders() });
+        const data = await res.json();
+        const cams = data.data ?? data;
 
-        document.getElementById('laneHint').textContent = isManual
-            ? 'Tap a lane to cycle: GREEN → RED'
-            : 'Enable Manual mode to control lanes';
-
-        document.getElementById('modeHint').textContent = 'Mode: ' + mode.toUpperCase();
-    }
-
-    // ── Lane Button — cycles through green/red ────────────────
-    async function cycleLaneLight(lane) {
-        const next = laneStates[lane] === 'green' ? 'red' : 'green';
-        await setLight(lane, next);
-    }
-
-    async function setLight(lane, state) {
-        try {
-            const res  = await postNode('/control/light', { lane, state });
-            const data = await res.json();
-            if (data.success) {
-                laneStates[lane] = state;
-                updateLaneBtn(lane, state);
-                logActivity(lane + ' → ' + state.toUpperCase(), 'success');
-                showToast('✅ ' + lane + ': ' + state.toUpperCase());
-            } else {
-                showToast('❌ ' + (data.message || 'Failed'), true);
-                logActivity(lane + ' light failed: ' + (data.message || ''), 'error');
-            }
-        } catch (e) {
-            showToast('❌ Node unreachable', true);
-            logActivity('Cannot reach STAP Node', 'error');
-        }
-    }
-
-    function updateLaneBtn(lane, state) {
-        const btn = document.getElementById('laneBtn-' + lane);
-        const lbl = document.getElementById('laneState-' + lane);
-        btn.className = 'tl-lane-btn active-' + state;
-        lbl.textContent = state.toUpperCase();
-    }
-
-    // ── Emergency Modal ───────────────────────────────────────
-    function showEmergencyPicker() {
-        document.getElementById('emergencyModal').style.display = 'flex';
-    }
-
-    function closeEmergencyModal() {
-        document.getElementById('emergencyModal').style.display = 'none';
-    }
-
-    async function triggerEmergency(lane) {
-        closeEmergencyModal();
-        try {
-            const res  = await postNode('/control/emergency', { lane });
-            const data = await res.json();
-            if (data.success) {
-                curMode = 'auto';
-                updateModeUI('auto');
-                document.getElementById('btn-emergency-panel').classList.add('active');
-                logActivity('🚨 EMERGENCY — ' + lane + ' has priority', 'error');
-                showToast('🚨 Emergency: ' + lane + ' priority lane');
-            } else {
-                showToast('❌ ' + (data.message || 'Failed'), true);
-            }
-        } catch (e) {
-            showToast('❌ Node unreachable', true);
-            logActivity('Cannot reach STAP Node', 'error');
-        }
-    }
-
-    // ── Camera Streams ────────────────────────────────────────
-    function loadStreams() {
-        DIRS.forEach(dir => {
-            const img     = document.getElementById('stream-' + dir);
-            const offline = document.getElementById('offline-' + dir);
-            const dot     = document.getElementById('camDot-' + dir);
-
-            img.onload = () => {
-                img.style.display     = 'block';
-                offline.style.display = 'none';
-                dot.classList.add('online');
-            };
-
-            img.onerror = () => handleStreamError(img);
-            img.src     = `http://${NODE_IP}:5000/video_feed/${dir}`;
-        });
-    }
-
-    function handleStreamError(img) {
-        const dir     = img.id.replace('stream-', '');
-        const offline = document.getElementById('offline-' + dir);
-        const dot     = document.getElementById('camDot-' + dir);
-
-        img.style.display     = 'none';
-        offline.style.display = 'flex';
-        dot.classList.remove('online');
-
-        setTimeout(() => {
-            img.src = `http://${NODE_IP}:5000/video_feed/${dir}?t=` + Date.now();
-        }, 5000);
-    }
-
-    // ── Status Polling ────────────────────────────────────────
-    let pollInterval = null;
-
-    function startStatusPolling() {
-        if (pollInterval) clearInterval(pollInterval);
-        fetchStatus();
-        pollInterval = setInterval(fetchStatus, 3000);
-    }
-
-    async function fetchStatus() {
-        try {
-            const res  = await fetch(`http://${NODE_IP}:5000/status`, { signal: AbortSignal.timeout(2000) });
-            const data = await res.json();
-
-            setNodeConnected(true);
-            renderStatusPanel(data);
-            document.getElementById('lastPoll').textContent = new Date().toLocaleTimeString();
-
-            if (data.mode && data.mode !== curMode) {
-                curMode = data.mode;
-                updateModeUI(data.mode);
-            }
-
-        } catch (e) {
-            setNodeConnected(false);
-            document.getElementById('statusPanel').innerHTML =
-                '<div style="color:#ef4444;font-size:12px;text-align:center;padding:8px 0;">⚠ Cannot reach node</div>';
-        }
-    }
-
-    function renderStatusPanel(data) {
-        const phaseClass = data.phase_state === 'GREEN'  ? 'tl-phase-green'
-                         : data.phase_state === 'YELLOW' ? 'tl-phase-yellow'
-                         : 'tl-phase-red';
-
-        const losColors = { A:'#166534', B:'#166534', C:'#92400e', D:'#92400e', E:'#991b1b', F:'#991b1b' };
-
-        let rows = '';
-        for (const lane of LANES) {
-            const count = data.vehicle_counts?.[lane] ?? 0;
-            const los   = data.los?.[lane] ?? '—';
-            rows += `<div class="tl-status-row">
-                <span class="tl-status-label">${lane}</span>
-                <span class="tl-status-value">${count}v &nbsp;<span style="color:${losColors[los]||'#334155'};font-weight:800;">LOS ${los}</span></span>
-            </div>`;
+        // Primary feed: first camera with a stream URL
+        const primary = cams.find(c => c.stream_url);
+        if (primary) {
+            const placeholder = document.getElementById('feedPlaceholder');
+            const iframe      = document.createElement('iframe');
+            iframe.src        = primary.stream_url;
+            iframe.title      = primary.label ?? 'Live Feed';
+            iframe.referrerPolicy = 'no-referrer';
+            document.getElementById('primaryFeed').insertBefore(iframe, placeholder);
+            placeholder.style.display = 'none';
         }
 
-        document.getElementById('statusPanel').innerHTML = `
-            <div class="tl-status-row">
-                <span class="tl-status-label">Active Lane</span>
-                <span class="tl-status-value">${data.active_lane ?? '—'}</span>
-            </div>
-            <div class="tl-status-row">
-                <span class="tl-status-label">Signal</span>
-                <span class="tl-phase-badge ${phaseClass}">${data.phase_state ?? '—'}</span>
-            </div>
-            <div class="tl-status-row">
-                <span class="tl-status-label">Remaining</span>
-                <span class="tl-status-value">${data.remaining_secs ?? 0}s</span>
-            </div>
-            <div class="tl-status-row">
-                <span class="tl-status-label">Mode</span>
-                <span class="tl-status-value" style="text-transform:uppercase;">${data.mode ?? '—'}</span>
-            </div>
-            <div class="tl-status-row">
-                <span class="tl-status-label">Rain</span>
-                <span class="tl-status-value">${data.rain ? '🌧 Detected' : '☀ Clear'}</span>
-            </div>
-            <div style="margin:8px 0 4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;">Counts</div>
-            ${rows}
-        `;
-    }
+        // 2×2 grid
+        const grid = document.getElementById('cameraGrid');
+        const slots = [...cams.slice(0, 4)];
+        while (slots.length < 4) slots.push(null);
 
-    function setNodeConnected(ok) {
-        document.getElementById('nodeConnDot').className   = 'tl-node-dot ' + (ok ? 'connected' : 'disconnected');
-        document.getElementById('nodeConnLabel').textContent = ok ? 'Node Connected' : 'Node Disconnected';
-    }
+        grid.innerHTML = slots.map(cam => {
+            if (!cam) return `
+                <div style="background:#0d1220;border-radius:8px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;">
+                    <span style="font-size:11px;color:rgba(255,255,255,.15);font-weight:600;">No camera</span>
+                </div>`;
+            const online = cam.status === 'active' || cam.status === 'online';
+            const media  = cam.stream_url
+                ? `<iframe src="${cam.stream_url}" style="width:100%;height:100%;border:none;position:absolute;inset:0;" referrerpolicy="no-referrer"></iframe>`
+                : `<span style="font-size:10px;color:rgba(255,255,255,.18);font-weight:600;padding:8px;text-align:center;line-height:1.4;">No stream<br>${cam.label ?? ''}</span>`;
+            return `
+                <div style="background:#0d1220;border-radius:8px;aspect-ratio:16/9;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                    ${media}
+                    <div style="position:absolute;bottom:5px;left:7px;font-size:10px;font-weight:700;color:rgba(255,255,255,.8);text-shadow:0 1px 4px rgba(0,0,0,.6);pointer-events:none;">
+                        ${cam.label ?? 'Camera'}
+                    </div>
+                    <div style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:${online ? '#29B357' : '#E03040'};box-shadow:0 0 6px 1px ${online ? 'rgba(41,179,87,.6)' : 'rgba(224,48,64,.5)'};"></div>
+                </div>`;
+        }).join('');
 
-    // ── Helpers ───────────────────────────────────────────────
-    function postNode(endpoint, body) {
-        return fetch(`http://${NODE_IP}:5000${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            signal: AbortSignal.timeout(3000)
-        });
-    }
+    } catch(e) { /* camera load fail — placeholder stays */ }
+}
 
-    function logActivity(msg, type = 'info') {
-        const log   = document.getElementById('activityLog');
-        const entry = document.createElement('div');
-        entry.className   = 'tl-log-entry ' + type;
-        entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-        log.prepend(entry);
-        while (log.children.length > 50) log.removeChild(log.lastChild);
-    }
+// ── Load lights & node summary ─────────────────────────────────
+async function loadLights() {
+    try {
+        const res  = await fetch('/admin/api/traffic-lights', { headers: authHeaders() });
+        const data = await res.json();
+        lights     = data.data ?? data;
 
-    function clearLog() {
-        document.getElementById('activityLog').innerHTML = '<div class="tl-log-entry info">Log cleared.</div>';
-    }
-
-    let toastTimer = null;
-    function showToast(msg, isErr = false) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.className = 'tl-toast show' + (isErr ? ' toast-err' : '');
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    // ── Init ──────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
-        updateModeUI('auto');
-        if (NODE_IP) {
-            loadStreams();
-            startStatusPolling();
+        // Sync mode from node if not in the middle of a user-initiated switch
+        if (!transitionTimer) {
+            const nodeMode = lights[0]?.node?.mode ?? 'auto';
+            currentMode = nodeMode === 'hazard' ? 'emergency' : nodeMode;
+            refreshModeUI();
         }
+
+        // Infer green lane from DB state (manual only)
+        if (!transitionTimer && currentMode === 'manual' && !activeLaneId) {
+            const green = lights.find(l => l.current_state === 'green');
+            if (green) activeLaneId = lightId(green);
+        }
+
+        renderLanes();
+        renderNodeStrip();
+    } catch(e) { console.error('loadLights:', e); }
+}
+
+const lightId = l => l.light_id ?? l.id;
+
+// ── Render node strip ──────────────────────────────────────────
+function renderNodeStrip() {
+    const nodes = {};
+    lights.forEach(l => {
+        const nid  = l.node?.node_id ?? l.node?.id ?? l.node_id;
+        if (!nid) return;
+        const name = l.node?.node_name ?? l.node?.name ?? 'Node';
+        const mode = l.node?.mode ?? '—';
+        if (!nodes[nid]) nodes[nid] = { name, mode, count: 0 };
+        nodes[nid].count++;
     });
+
+    document.getElementById('nodeStrip').innerHTML = Object.values(nodes).map(n => {
+        const mc  = n.mode === 'auto' ? 'tl-badge-auto' : n.mode === 'manual' ? 'tl-badge-manual' : 'tl-badge-emergency';
+        return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div>
+                <div style="font-size:14px;font-weight:700;color:var(--navy);">${n.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${n.count} signal(s) managed</div>
+            </div>
+            <span class="tl-badge ${mc}">${n.mode.toUpperCase()}</span>
+        </div>`;
+    }).join('') || '';
+}
+
+// ── Render lane buttons ────────────────────────────────────────
+function renderLanes() {
+    const hint    = document.getElementById('laneHint');
+    const isMan   = currentMode === 'manual';
+    const isEmg   = currentMode === 'emergency';
+
+    hint.textContent = isMan
+        ? 'Select a lane to give it the green light. Yellow transition is 3 seconds.'
+        : isEmg
+            ? 'Disengage Emergency mode to control individual lanes.'
+            : 'Lanes are controlled automatically by the AI. Enable Manual to override.';
+
+    if (!lights.length) {
+        document.getElementById('laneList').innerHTML =
+            '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:20px 0;">No traffic lights registered.</div>';
+        return;
+    }
+
+    document.getElementById('laneList').innerHTML = lights.map(l => {
+        const lid        = lightId(l);
+        const isActive   = activeLaneId === lid && isMan;
+        const isTo       = transitioningToId === lid;
+        const isFrom     = prevActiveLaneId === lid;
+        const isTransit  = (isTo || isFrom) && !!transitioningToId;
+
+        // Displayed signal state
+        let sigState = isEmg ? 'r'
+            : isTransit ? 'y'
+            : isActive  ? 'g'
+            : 'r';
+
+        // Row highlight class
+        const rowCls = isActive  ? 'is-green'
+            : isTransit ? 'is-yellow'
+            : isEmg     ? 'is-red-emg'
+            : '';
+
+        // Button state
+        const btnCls    = isActive  ? 'btn-active'
+            : isTransit ? 'btn-transitioning'
+            : '';
+        const disabled  = (!isMan || isEmg || (!!transitioningToId && !isTransit)) ? 'disabled' : '';
+        const isAlreadyActive = isActive && isMan;
+
+        const btnText = isTo && isTransit ? `Switching… (${countdown}s)`
+            : isFrom && isTransit ? 'Turning Yellow…'
+            : isActive ? 'Active — Green'
+            : 'Set to Green';
+
+        return `
+        <div class="tl-lane ${rowCls}" id="lane-row-${lid}">
+            <div class="tl-lane-top">
+                <div class="tl-lane-info">
+                    <div class="tl-lane-name">${l.location_label ?? 'Light ' + lid}</div>
+                    <div class="tl-lane-sub">Node: ${l.node?.node_name ?? l.node?.name ?? '—'}</div>
+                </div>
+                <div class="tl-signal" id="signal-${lid}">
+                    <div class="tl-sig-dot r ${sigState === 'r' ? 'lit-r' : ''}"></div>
+                    <div class="tl-sig-dot y ${sigState === 'y' ? 'lit-y' : ''}"></div>
+                    <div class="tl-sig-dot g ${sigState === 'g' ? 'lit-g' : ''}"></div>
+                </div>
+            </div>
+            <button class="tl-lane-btn ${btnCls}" id="lane-btn-${lid}"
+                onclick="requestGreen(${lid})"
+                ${disabled || isAlreadyActive ? 'disabled' : ''}>
+                ${btnText}
+            </button>
+            <div class="tl-lane-btn-sub" id="lane-sub-${lid}"></div>
+        </div>`;
+    }).join('');
+}
+
+// ── Request green (with 3-second yellow transition) ────────────
+function requestGreen(lid) {
+    if (currentMode !== 'manual') return;
+    if (transitioningToId)        return;
+    if (activeLaneId === lid)     return; // already green
+
+    const prev = activeLaneId; // may be null if no lane was green yet
+    prevActiveLaneId  = prev;
+    transitioningToId = lid;
+    countdown         = Math.ceil(YELLOW_TIME_MS / 1000);
+
+    // Re-render immediately to show yellow state
+    renderLanes();
+
+    // If a lane was previously green, tell the ESP32 to set it yellow
+    if (prev !== null) {
+        const prevLight = lights.find(l => lightId(l) === prev);
+        const prevLabel = laneLabel(prevLight);
+        if (prevLabel) {
+            apiSetLight(prevLabel, 'yellow').then(() => {
+                log(`Yellow: ${prevLight?.location_label ?? prevLabel}`);
+            });
+        }
+    }
+
+    // Live countdown in button label
+    countdownInterval = setInterval(() => {
+        countdown = Math.max(0, countdown - 1);
+        const btnEl = document.getElementById(`lane-btn-${lid}`);
+        if (btnEl) btnEl.textContent = `Switching… (${countdown}s)`;
+    }, 1000);
+
+    // After YELLOW_TIME_MS → send green command
+    transitionTimer = setTimeout(async () => {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        transitionTimer   = null;
+
+        const newLight  = lights.find(l => lightId(l) === lid);
+        const newLabel  = laneLabel(newLight);
+
+        if (newLabel) {
+            try {
+                await apiSetLight(newLabel, 'green');
+                log(`Green set: ${newLight?.location_label ?? newLabel}`);
+            } catch(e) {
+                log('Error setting green — check node connection', 'err');
+            }
+        }
+
+        activeLaneId      = lid;
+        transitioningToId = null;
+        prevActiveLaneId  = null;
+        countdown         = 0;
+        renderLanes();
+    }, YELLOW_TIME_MS);
+}
+
+// ── Mode selection ─────────────────────────────────────────────
+async function selectMode(mode) {
+    // Cancel any pending transition
+    if (transitionTimer) {
+        clearTimeout(transitionTimer);
+        clearInterval(countdownInterval);
+        transitionTimer   = null;
+        countdownInterval = null;
+        transitioningToId = null;
+        prevActiveLaneId  = null;
+        countdown         = 0;
+    }
+
+    currentMode = mode;
+
+    if (mode === 'emergency') {
+        activeLaneId = null; // all red — no active lane
+    }
+
+    refreshModeUI();
+    renderLanes();
+
+    // Send to backend
+    const laravelMode = mode === 'emergency' ? 'hazard' : mode;
+    try {
+        const res  = await fetch('/admin/api/node/mode', {
+            method:  'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ mode: laravelMode }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            log('Mode error: ' + (data.message ?? 'Failed'), 'err');
+        } else {
+            const labels = { auto: 'Auto mode — AI in control', manual: 'Manual mode activated', emergency: 'Emergency mode — all lanes RED' };
+            log(labels[mode] ?? mode);
+        }
+    } catch(e) {
+        log('Network error setting mode', 'err');
+    }
+}
+
+// ── Refresh mode UI (buttons + badge + banner) ─────────────────
+function refreshModeUI() {
+    const badge     = document.getElementById('modeBadge');
+    const banner    = document.getElementById('emgBanner');
+    const btns      = { auto: 'btn-mode-auto', manual: 'btn-mode-manual', emergency: 'btn-mode-emergency' };
+
+    Object.keys(btns).forEach(m => {
+        const el = document.getElementById(btns[m]);
+        el.className = 'tl-mode-btn' + (currentMode === m ? ' sel-' + m : '');
+    });
+
+    if (currentMode === 'auto') {
+        badge.textContent = 'Auto';
+        badge.className   = 'tl-badge tl-badge-auto';
+        banner.classList.remove('on');
+    } else if (currentMode === 'manual') {
+        badge.textContent = 'Manual';
+        badge.className   = 'tl-badge tl-badge-manual';
+        banner.classList.remove('on');
+    } else {
+        badge.textContent = 'Emergency';
+        badge.className   = 'tl-badge tl-badge-emergency';
+        banner.classList.add('on');
+    }
+}
+
+// ── API calls ──────────────────────────────────────────────────
+// Derive the LANE label (NORTH/SOUTH/EAST/WEST) from location_label or direction
+function laneLabel(light) {
+    if (!light) return null;
+    const loc = (light.location_label ?? '').toUpperCase();
+    if (loc.includes('NORTH')) return 'NORTH';
+    if (loc.includes('SOUTH')) return 'SOUTH';
+    if (loc.includes('EAST'))  return 'EAST';
+    if (loc.includes('WEST'))  return 'WEST';
+    // Fallback: direction field
+    const dir = (light.direction ?? '').toUpperCase();
+    if (['NORTH','SOUTH','EAST','WEST'].includes(dir)) return dir;
+    return null;
+}
+
+async function apiSetLight(lane, state) {
+    const res = await fetch('/admin/traffic-lights/' + lights.find(l => laneLabel(l) === lane)?.light_id + '/state', {
+        method:  'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ state, lane }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+// ── Activity log ───────────────────────────────────────────────
+function log(msg, type) {
+    const now  = new Date().toLocaleTimeString();
+    sessionLog.unshift({ msg, type: type ?? 'info', time: now });
+    if (sessionLog.length > 20) sessionLog.pop();
+    renderLog();
+}
+
+function clearLog() {
+    sessionLog.length = 0;
+    renderLog();
+}
+
+function renderLog() {
+    const el = document.getElementById('activityLog');
+    if (!sessionLog.length) {
+        el.innerHTML = '<div class="tl-log-empty">No actions yet this session.</div>';
+        return;
+    }
+    el.innerHTML = sessionLog.map(e =>
+        `<div class="tl-log-entry">
+            <span class="tl-log-time">${e.time}</span>
+            <span class="tl-log-msg ${e.type === 'err' ? 'err' : e.type === 'warn' ? 'warn' : ''}">${e.msg}</span>
+        </div>`
+    ).join('');
+}
 </script>
 @endpush
