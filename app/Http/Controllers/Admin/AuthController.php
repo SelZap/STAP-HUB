@@ -8,92 +8,120 @@ use App\Models\AdminActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
 
-class AuthController extends Controller
+class AccountController extends Controller
 {
-    /**
-     * Show the admin login page.
-     */
-    public function showLogin()
+    // List all admin accounts (superuser only)
+    public function index()
     {
-        return view('admin.auth.login');
+        if (request()->expectsJson()) {
+            $admins = Admin::select('admin_id', 'admin_name', 'email', 'is_superuser', 'created_at')
+                ->orderBy('admin_id')
+                ->get();
+            return response()->json($admins);
+        }
+        return view('admin.accounts');
     }
 
-    /**
-     * Handle admin login and issue JWT.
-     */
-    public function login(Request $request)
+    // Create a new admin account (superuser only)
+    public function store(Request $request)
     {
+        $this->authorizeSuperuser();
+
         $request->validate([
-            'admin_name' => 'required|string',
-            'password' => 'required|string',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:admins,email',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $credentials = $request->only('admin_name', 'password');
-
-        try {
-            if (! $token = Auth::guard('admin')->attempt($credentials)) {
-                return response()->json(['message' => 'Invalid credentials.'], 401);
-            }
-        } catch (JWTException $e) {
-            return response()->json(['message' => 'Could not create token.'], 500);
-        }
-
-        $admin = Auth::guard('admin')->user();
+        // Use the model's password mutator (sets password_hash correctly)
+        $admin = new Admin();
+        $admin->admin_name   = $request->name;
+        $admin->email        = $request->email;
+        $admin->password     = $request->password; // triggers mutator → stores in password_hash
+        $admin->is_superuser = false;
+        $admin->save();
 
         AdminActivityLog::create([
-            'admin_id' => $admin->admin_id,
-            'action'   => 'admin_login',
+            'admin_id'  => Auth::guard('admin')->user()->admin_id,
+            'action'    => 'admin_account_created',
+            'target_id' => $admin->admin_id,
+            'notes'     => "Created account for {$admin->email}",
         ]);
 
-        return response()->json([
-            'token' => $token,
-            'admin' => [
-                'id'           => $admin->admin_id,
-                'name'         => $admin->name,
-                'admin_name'   => $admin->name,
-                'email'        => $admin->email,
-                'is_superuser' => $admin->is_superuser,
-            ],
-        ])->cookie('admin_token', $token, 60) ; 
+        return response()->json(['message' => 'Admin account created.', 'admin' => $admin], 201);
     }
 
-    /**
-     * Refresh the JWT token.
-     */
-    public function refresh()
+    // Show single admin account (superuser only)
+    public function show($id)
     {
-        try {
-            $newToken = JWTAuth::refresh(JWTAuth::getToken());
-            return response()->json(['token' => $newToken]);
-        } catch (JWTException $e) {
-            return response()->json(['message' => 'Token refresh failed.'], 401);
-        }
+        $this->authorizeSuperuser();
+        return response()->json(Admin::findOrFail($id));
     }
 
-    /**
-     * Logout the admin and invalidate JWT.
-     */
-    public function logout(Request $request)
+    // Update admin account (superuser = any; regular admin = own only)
+    public function update(Request $request, $id)
     {
-        $admin = Auth::guard('admin')->user();
+        $current = Auth::guard('admin')->user();
 
-        try {
-            Auth::guard('admin')->logout();
-        } catch (JWTException $e) {
-            // Token already invalid — proceed
+        if (!$current->is_superuser && $current->admin_id != $id) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        if ($admin) {
-            AdminActivityLog::create([
-                'admin_id' => $admin->admin_id,
-                'action'   => 'admin_logout',
-            ]);
+        $admin = Admin::findOrFail($id);
+
+        $request->validate([
+            'name'     => 'sometimes|string|max:255',
+            'email'    => "sometimes|email|unique:admins,email,{$admin->admin_id},admin_id",
+            'password' => 'sometimes|string|min:8|confirmed',
+        ]);
+
+        if ($request->filled('name'))     $admin->admin_name = $request->name;
+        if ($request->filled('email'))    $admin->email      = $request->email;
+        if ($request->filled('password')) $admin->password   = $request->password; // mutator handles hash
+
+        $admin->save();
+
+        $action = ($current->admin_id === $admin->admin_id) ? 'own_account_edited' : 'admin_account_edited';
+
+        AdminActivityLog::create([
+            'admin_id'  => $current->admin_id,
+            'action'    => $action,
+            'target_id' => $admin->admin_id,
+        ]);
+
+        return response()->json(['message' => 'Account updated.', 'admin' => $admin]);
+    }
+
+    // Delete admin account (superuser only)
+    public function destroy($id)
+    {
+        $this->authorizeSuperuser();
+
+        $current = Auth::guard('admin')->user();
+
+        if ($current->admin_id == $id) {
+            return response()->json(['message' => 'You cannot delete your own account.'], 422);
         }
 
-        return response()->json(['message' => 'Logged out successfully.'])
-          ->withoutCookie('admin_token');
+        $admin = Admin::findOrFail($id);
+        $email = $admin->email;
+        $admin->delete();
+
+        AdminActivityLog::create([
+            'admin_id'  => $current->admin_id,
+            'action'    => 'admin_account_deleted',
+            'target_id' => $id,
+            'notes'     => "Deleted account: {$email}",
+        ]);
+
+        return response()->json(['message' => 'Admin account deleted.']);
+    }
+
+    private function authorizeSuperuser()
+    {
+        if (!Auth::guard('admin')->user()->is_superuser) {
+            abort(403, 'Superuser access required.');
+        }
     }
 }
