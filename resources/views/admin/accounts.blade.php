@@ -138,7 +138,11 @@ async function submitModal() {
     try {
         const url    = editingId ? `/admin/accounts/${editingId}` : '/admin/accounts';
         const method = editingId ? 'PUT' : 'POST';
-        const res    = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+        const res    = await fetch(url, {
+            method,
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
         const data   = await res.json();
 
         if (!res.ok) {
