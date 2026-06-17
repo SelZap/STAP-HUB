@@ -16,8 +16,6 @@
     .ir-modal-badges    { display:flex;gap:6px;flex-wrap:wrap;margin-top:6px; }
     .ir-vtag            { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#e0f2fe;color:#0369a1; }
     .ir-actions         { display:flex;gap:8px;flex-wrap:wrap;padding:14px 0 0;border-top:1px solid #e2e8f0;margin-top:14px; }
-    .ir-email-box       { background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-top:14px; }
-    .ir-email-box-title { font-size:12px;font-weight:700;color:#0f172a;margin-bottom:12px; }
 </style>
 @endpush
 
@@ -122,7 +120,6 @@ async function viewReport(id) {
 
     const rid      = r.incident_id ?? r.id;
     const isPending = r.status === 'pending';
-    const hasEmail  = !!(r.reporter_email);
     const statusBg  = isPending ? '#fef3c7;color:#92400e' : '#dcfce7;color:#166534';
     const vtypes    = r.vehicle_type
         ? r.vehicle_type.split(',').map(v => '<span class="ir-vtag">' + v.trim().replace('_', ' ') + '</span>').join('')
@@ -165,27 +162,9 @@ async function viewReport(id) {
 
         '<div class="ir-actions">' +
             (isPending ? '<button onclick="markReviewed(' + rid + ', this); closeModal();" class="stap-btn-primary stap-btn-green" style="font-size:13px;padding:9px 20px;">✓ Mark as Reviewed</button>' : '') +
-            '<button onclick="toggleEmailCompose(' + rid + ')" id="emailToggleBtn_' + rid + '" class="stap-btn-primary" style="font-size:13px;padding:9px 20px;background:var(--navy-muted);margin-left:auto;"' + (!hasEmail ? ' disabled title="No email on file"' : '') + '>' +
-                '✉ Send Email to Reporter' + (!hasEmail ? ' <span style="opacity:.6;">(no email)</span>' : '') +
-            '</button>' +
         '</div>'    ;
 
     document.getElementById('reportModalContent').innerHTML = html;
-}
-
-function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function buildEmailTemplate(r) {
-    return 'Dear ' + (r.reporting_party_name ?? 'Reporter') + ',\n\n' +
-        'This is to inform you regarding your incident report (Reference #' + String(r.incident_id ?? r.id).padStart(5,'0') + ').\n\n' +
-        'Incident Date: ' + (r.incident_date ?? '—') + '\n' +
-        'Incident Time: ' + (r.incident_time ?? '—') + '\n' +
-        'Location: ' + (r.location_description ?? '—') + '\n' +
-        'Current Status: ' + (r.status ?? '').toUpperCase() + '\n\n' +
-        '[Add your message or updates here.]\n\n' +
-        'Regards,\nSTAP Hub Administration';
 }
 
 async function markReviewed(id, btn) {

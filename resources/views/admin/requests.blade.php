@@ -12,10 +12,6 @@
     .req-field-full       { grid-column:1/-1; }
     .req-section-title    { font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0; }
     .req-actions          { display:flex;gap:8px;flex-wrap:wrap;padding:14px 0 0;border-top:1px solid #e2e8f0;margin-top:14px; }
-    .req-email-box        { background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-top:14px; }
-    .req-email-box-title  { font-size:12px;font-weight:700;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px; }
-    .req-email-approve    { border-left:3px solid #22c55e; }
-    .req-email-reject     { border-left:3px solid #ef4444; }
 </style>
 @endpush
 
@@ -174,12 +170,10 @@ async function viewRequest(id) {
         }
 
         html += '<div class="req-actions">' +
-            (r.status !== 'approved' ? '<button onclick="showEmailCompose(' + r.request_id + ', \'approved\')" class="stap-btn-primary stap-btn-green" style="font-size:13px;padding:9px 20px;">✓ Approve</button>' : '') +
-            (r.status !== 'rejected' ? '<button onclick="showEmailCompose(' + r.request_id + ', \'rejected\')" class="stap-btn-primary" style="background:var(--red);font-size:13px;padding:9px 20px;">✗ Reject</button>' : '') +
-            (r.status !== 'under_review' ? '<button onclick="updateStatus(' + r.request_id + ', \'under_review\', false)" class="stap-btn-primary" style="background:var(--navy-muted);font-size:13px;padding:9px 20px;">Mark Under Review</button>' : '') +
+            (r.status !== 'approved' ? '<button onclick="updateStatus(' + r.request_id + ', \'approved\')" class="stap-btn-primary stap-btn-green" style="font-size:13px;padding:9px 20px;">✓ Approve</button>' : '') +
+            (r.status !== 'rejected' ? '<button onclick="updateStatus(' + r.request_id + ', \'rejected\')" class="stap-btn-primary" style="background:var(--red);font-size:13px;padding:9px 20px;">✗ Reject</button>' : '') +
+            (r.status !== 'under_review' ? '<button onclick="updateStatus(' + r.request_id + ', \'under_review\')" class="stap-btn-primary" style="background:var(--navy-muted);font-size:13px;padding:9px 20px;">Mark Under Review</button>' : '') +
         '</div>';
-
-        html += '<div id="emailComposeWrap_' + r.request_id + '" style="display:none;margin-top:14px;"></div>';
 
         document.getElementById('modalContent').innerHTML = html;
     } catch (e) {
@@ -187,59 +181,6 @@ async function viewRequest(id) {
         document.getElementById('modalContent').innerHTML = '<div class="stap-empty">Failed to load request.</div>';
     }
 }
-
-function showEmailCompose(id, decision) {
-    const r        = currentRequest;
-    const hasEmail = !!(r?.requester_email);
-    const wrap     = document.getElementById('emailComposeWrap_' + id);
-    if (!wrap) return;
-
-    const isApprove = decision === 'approved';
-    const subject   = isApprove
-        ? 'Your Footage Request #' + id + ' has been Approved — STAP Hub'
-        : 'Update on Your Footage Request #' + id + ' — STAP Hub';
-    const template  = isApprove ? buildApproveTemplate(r) : buildRejectTemplate(r);
-    const boxClass  = isApprove ? 'req-email-approve' : 'req-email-reject';
-    const btnLabel  = isApprove ? '✓ Confirm Approval &amp; Send Email' : '✗ Confirm Rejection &amp; Send Email';
-    const btnStyle  = isApprove ? 'background:var(--green);' : 'background:var(--red);';
-
-    wrap.innerHTML =
-        '<div class="req-email-box ' + boxClass + '">' +
-            '<div class="req-email-box-title">' + (isApprove ? '✅' : '❌') + ' ' + (isApprove ? 'Approve & Notify Requester' : 'Reject & Notify Requester') + '</div>' +
-            (!hasEmail ? '<div style="font-size:12px;color:#b91c1c;margin-bottom:10px;">⚠ No email on file — status will be updated but no email will be sent.</div>' : '') +
-            '<div class="stap-form-group"><label class="stap-form-label">Subject</label>' +
-                '<input type="text" id="emailSubject_' + id + '" class="stap-form-input" value="' + subject.replace(/"/g, '&quot;') + '">' +
-            '</div>' +
-            '<div class="stap-form-group"><label class="stap-form-label">Message</label>' +
-                '<textarea id="emailBody_' + id + '" class="stap-form-input" rows="12" style="font-family:monospace;font-size:12px;">' + escapeHtml(template) + '</textarea>' +
-            '</div>' +
-            '<div id="emailResult_' + id + '" style="display:none;font-size:12px;font-weight:600;padding:10px 14px;border-radius:8px;margin-bottom:10px;"></div>' +
-            '<div style="display:flex;gap:8px;">' +
-                '<button onclick="updateStatus(' + id + ', \'' + decision + '\', ' + hasEmail + ')" class="stap-btn-primary" style="' + btnStyle + 'font-size:13px;padding:9px 20px;">' + btnLabel + '</button>' +
-                '<button onclick="document.getElementById(\'emailComposeWrap_' + id + '\').style.display=\'none\'" class="stap-btn-primary" style="background:var(--navy-muted);font-size:13px;padding:9px 16px;">Cancel</button>' +
-            '</div>' +
-        '</div>';
-
-    wrap.style.display = 'block';
-    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function buildApproveTemplate(r) {
-    const name = r.requester_name ?? 'Requester';
-    const date = r.footage_date ?? (r.footage_date_start ? r.footage_date_start + ' to ' + r.footage_date_end : '—');
-    return 'Dear ' + name + ',\n\nWe are pleased to inform you that your footage request (Request #' + r.request_id + ') has been approved.\n\nRequest Details:\n  Nature: ' + (r.request_nature ?? '—') + '\n  Footage Date: ' + date + '\n  Time Range: ' + (r.footage_time_start ?? '—') + ' – ' + (r.footage_time_end ?? '—') + '\n\nNext Steps:\n  1. Our MIS team has located and secured the requested footage.\n  2. Please prepare the following before claiming:\n     - Valid government-issued ID\n     - Authorization letter (if claiming on behalf of someone)\n     - [Add any other requirements here]\n  3. Visit the STAP Hub office during business hours (Mon–Fri, 8AM–5PM).\n  4. Reference this email and your Request #' + r.request_id + ' when you arrive.\n\nFor inquiries, you may reply to this email or contact us directly.\n\nRegards,\nSTAP Hub Administration\nMayor Gil Fernando Ave / Sumulong Highway, Marikina City';
-}
-
-function buildRejectTemplate(r) {
-    const name = r.requester_name ?? 'Requester';
-    const date = r.footage_date ?? (r.footage_date_start ? r.footage_date_start + ' to ' + r.footage_date_end : '—');
-    return 'Dear ' + name + ',\n\nWe regret to inform you that your footage request (Request #' + r.request_id + ') has not been approved at this time.\n\nRequest Details:\n  Nature: ' + (r.request_nature ?? '—') + '\n  Footage Date: ' + date + '\n  Time Range: ' + (r.footage_time_start ?? '—') + ' – ' + (r.footage_time_end ?? '—') + '\n\nReason for Rejection:\n  [Please state the reason(s) here]\n\nIf you believe this was made in error or would like to resubmit, please contact us.\n\nWe apologize for any inconvenience.\n\nRegards,\nSTAP Hub Administration\nMayor Gil Fernando Ave / Sumulong Highway, Marikina City';
-}
-
 
 function closeModal() {
     document.getElementById('reqModal').classList.remove('is-open');
