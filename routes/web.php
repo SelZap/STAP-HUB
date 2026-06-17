@@ -38,7 +38,6 @@ Route::get('/data-request/cameras', [FootageRequestController::class, 'cameras']
 // Incident Report
 Route::get('/incident-report', [IncidentReportController::class, 'create'])->name('incident.create');
 Route::post('/incident-report', [IncidentReportController::class, 'store'])->name('incident.store');
-Route::post('/incident-report/validate-email', [IncidentReportController::class, 'validateEmail'])->name('incident.validate-email');
 
 // Public announcements banner
 Route::get('/api/announcements/active', [AnnouncementController::class, 'active'])->name('announcements.active');
@@ -56,50 +55,49 @@ Route::post('/admin/logout', [AuthController::class, 'logout'])->name('admin.log
 
 Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function () {
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+  Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/cameras', [CameraController::class, 'index'])->name('cameras');
+  Route::get('/cameras', [CameraController::class, 'index'])->name('cameras');
 
-    Route::get('/traffic-logs', [TrafficLogController::class, 'index'])->name('traffic-logs');
+  Route::get('/traffic-logs', [TrafficLogController::class, 'index'])->name('traffic-logs');
 
-    Route::get('/traffic-lights', [TrafficLightController::class, 'index'])->name('traffic-lights');
-    Route::post('/traffic-lights/{light_id}/state', [TrafficLightController::class, 'updateState'])->name('traffic-lights.state');
-    Route::post('/traffic-lights/{light_id}/mode', [TrafficLightController::class, 'updateMode'])->name('traffic-lights.mode');
+  Route::get('/traffic-lights', [TrafficLightController::class, 'index'])->name('traffic-lights');
+  Route::post('/traffic-lights/{light_id}/state', [TrafficLightController::class, 'updateState'])->name('traffic-lights.state');
+  Route::post('/traffic-lights/{light_id}/mode', [TrafficLightController::class, 'updateMode'])->name('traffic-lights.mode');
 
-    Route::get('/alerts', [AlertController::class, 'index'])->name('alerts');
-    Route::post('/alerts/{alert_id}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
+  Route::get('/alerts', [AlertController::class, 'index'])->name('alerts');
+  Route::post('/alerts/{alert_id}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
 
-    // Footage Requests
-    Route::get('/requests', [RequestController::class, 'index'])->name('requests');
-    Route::post('/requests/{request_id}/status', [RequestController::class, 'updateStatus'])->name('requests.status');
-    Route::post('/requests/{request_id}/email', [RequestController::class, 'sendEmail'])->name('requests.email');
+  // Footage Requests
+  Route::get('/requests', [RequestController::class, 'index'])->name('requests');
+  Route::post('/requests/{request_id}/status', [RequestController::class, 'updateStatus'])->name('requests.status');
+  Route::post('/requests/{request_id}/email', [RequestController::class, 'sendEmail'])->name('requests.email');
 
-    // Account Management (superuser only)
-    Route::get('/accounts', [AccountController::class, 'index'])->name('accounts');
-    Route::post('/accounts', [AccountController::class, 'store'])->name('accounts.store');
-    Route::put('/accounts/{admin_id}', [AccountController::class, 'update'])->name('accounts.update');
-    Route::delete('/accounts/{admin_id}', [AccountController::class, 'destroy'])->name('accounts.destroy');
+  // Account Management (superuser only)
+  Route::get('/accounts', [AccountController::class, 'index'])->name('accounts');
+  Route::post('/accounts', [AccountController::class, 'store'])->name('accounts.store');
+  Route::put('/accounts/{admin_id}', [AccountController::class, 'update'])->name('accounts.update');
+  Route::delete('/accounts/{admin_id}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
-    // Incident Reports
-    Route::get('/incident-reports', [IncidentReportController::class, 'index'])->name('incident-reports.index');
-    Route::patch('/incident-reports/{id}/review', [IncidentReportController::class, 'markReviewed'])->name('incident-reports.review');
-    Route::post('/incident-reports/{id}/email', [IncidentReportController::class, 'sendEmail'])->name('incident-reports.email');
-    Route::get('/incident-reports/pending-count', [IncidentReportController::class, 'pendingCount'])->name('incident-reports.pending-count');
+  // Incident Reports
+  Route::get('/incident-reports', [IncidentReportController::class, 'index'])->name('incident-reports.index');
+  Route::patch('/incident-reports/{id}/review', [IncidentReportController::class, 'markReviewed'])->name('incident-reports.review');
+  Route::get('/incident-reports/pending-count', [IncidentReportController::class, 'pendingCount'])->name('incident-reports.pending-count');
 
-    // Announcements
-    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
-    Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
-    Route::patch('/announcements/{id}/toggle', [AnnouncementController::class, 'toggle'])->name('announcements.toggle');
-    Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
+  // Announcements
+  Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
+  Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+  Route::patch('/announcements/{id}/toggle', [AnnouncementController::class, 'toggle'])->name('announcements.toggle');
+  Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
 
-    // AJAX API Endpoints
-    Route::get('/api/dashboard/summary',     [DashboardController::class,   'summary']);
-    Route::get('/api/cameras',               [CameraController::class,       'list']);
-    Route::get('/api/alerts',                [AlertController::class,        'list']);
-    Route::get('/api/traffic-logs',          [TrafficLogController::class,   'list']);
-    Route::get('/api/traffic-lights',        [TrafficLightController::class, 'list']);
-    Route::get('/api/requests',              [RequestController::class,      'list']);
-    Route::get('/api/requests/{request_id}', [RequestController::class,      'show']);
-    Route::get('/api/announcements',         [AnnouncementController::class, 'list']);
-    Route::post('/requests/{id}/requirements', [RequestController::class, 'sendRequirements']);
+  // AJAX API Endpoints
+  Route::get('/api/dashboard/summary', [DashboardController::class, 'summary']);
+  Route::get('/api/cameras', [CameraController::class, 'list']);
+  Route::get('/api/alerts', [AlertController::class, 'list']);
+  Route::get('/api/traffic-logs', [TrafficLogController::class, 'list']);
+  Route::get('/api/traffic-lights', [TrafficLightController::class, 'list']);
+  Route::get('/api/requests', [RequestController::class, 'list']);
+  Route::get('/api/requests/{request_id}', [RequestController::class, 'show']);
+  Route::get('/api/announcements', [AnnouncementController::class, 'list']);
+  Route::post('/requests/{id}/requirements', [RequestController::class, 'sendRequirements']);
 });

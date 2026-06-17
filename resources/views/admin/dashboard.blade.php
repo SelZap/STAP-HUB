@@ -84,7 +84,6 @@
         place-items: center;
     }
 
-    /* MJPEG stream via <img> tag */
     .feed-card-media img.mjpeg {
         width: 100%;
         height: 100%;
@@ -351,10 +350,7 @@
         white-space: nowrap;
     }
 
-    .feed-camera-health-sub {
-        font-size: .72rem;
-        color: #64748b;
-    }
+    .feed-camera-health-sub { font-size: .72rem; color: #64748b; }
 
     .feed-camera-health-pill {
         font-size: .68rem;
@@ -366,15 +362,8 @@
         flex-shrink: 0;
     }
 
-    .feed-camera-health-pill.online {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .feed-camera-health-pill.offline {
-        background: #fee2e2;
-        color: #991b1b;
-    }
+    .feed-camera-health-pill.online  { background: #dcfce7; color: #166534; }
+    .feed-camera-health-pill.offline { background: #fee2e2; color: #991b1b; }
 
     .feed-note {
         border-radius: .875rem;
@@ -456,7 +445,6 @@
         </div>
 
         <div class="feed-cam-grid">
-
             @foreach ([
                 ['direction' => 'NORTH', 'label' => 'Mayor Gil Fernando Ave — Northbound'],
                 ['direction' => 'SOUTH', 'label' => 'Mayor Gil Fernando Ave — Southbound'],
@@ -488,7 +476,6 @@
                 </div>
             </div>
             @endforeach
-
         </div>
     </div>
 
@@ -552,8 +539,9 @@
 
 @push('scripts')
 <script>
-    // ── Node IP (saved in localStorage for convenience) ───────
+    // ── Node IP & Global Hardware Connection Flag ────────────
     let NODE_IP = localStorage.getItem('stap_node_ip') || '192.168.1.100';
+    let isNodeOnline = false; 
     document.getElementById('nodeIpInput').value = NODE_IP;
 
     const DIRECTIONS = ['north', 'south', 'east', 'west'];
@@ -564,7 +552,7 @@
         document.getElementById('nodeIpStatus').textContent = '✅ Applied';
         setTimeout(() => document.getElementById('nodeIpStatus').textContent = '', 2000);
         loadStreams();
-        startStatusPolling();
+        fetchStatus();
     }
 
     // ── Load MJPEG streams ────────────────────────────────────
@@ -602,35 +590,56 @@
         img.style.display     = 'none';
         offline.style.display = 'flex';
         offline.querySelector('div').textContent = 'Stream unavailable';
-        tag.textContent   = 'Offline';
-        dot.className     = 'feed-cam-index-dot offline';
+        tag.textContent    = 'Offline';
+        dot.className      = 'feed-cam-index-dot offline';
         status.textContent = 'Offline';
-        status.className  = 'feed-card-status offline';
+        status.className   = 'feed-card-status offline';
 
-        // Retry after 5 seconds
         setTimeout(() => {
             img.src = `http://${NODE_IP}:5000/video_feed/${dir}?t=` + Date.now();
         }, 5000);
     }
 
-    // ── Poll /status every 3 seconds ─────────────────────────
-    function startStatusPolling() {
-        fetchStatus();
-        setInterval(fetchStatus, 3000);
+    // ── Fetch Status Edge API ─────────────────────────────────
+    async function fetchStatus() {
+        try {
+            const res  = await fetch(`http://${NODE_IP}:5000/status`, { signal: AbortSignal.timeout(2000) });
+            const data = await res.json();
+            isNodeOnline = true;
+            renderStatusPanel(data);
+            document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+            setVehicleCountsOnline();
+        } catch (e) {
+            isNodeOnline = false;
+            document.getElementById('statusPanel').innerHTML =
+                '<div style="color:#ef4444;font-size:12px;text-align:center;padding:8px 0;">⚠ Cannot reach STAP Node</div>';
+            document.getElementById('lastUpdated').textContent = 'Offline';
+            setVehicleCountsOffline();
+        }
     }
 
+    // ── Load Dashboard Summary Laravel API ───────────────────
     async function loadDashboardSummary() {
         try {
             const res = await fetch('/admin/api/dashboard/summary', {
                 headers: typeof authHeaders === 'function' ? authHeaders() : {}
             });
             const data = await res.json();
+            
+            // Only paint database updates if the hardware node isn't reporting offline override
             renderLiveVehicleCount(data.live_vehicle_data || []);
+            if (!isNodeOnline) {
+                _countsAreZeroed = false; 
+                setVehicleCountsOffline();
+            }
+            
             renderCameraHealth(data.cameras || []);
         } catch (e) {
-            const livePanel = document.getElementById('liveVehicleGrid');
-            if (livePanel) {
-                livePanel.innerHTML = '<div class="dash-los-empty" style="color:#ef4444;">⚠ Unable to load live vehicle count</div>';
+            if (!isNodeOnline) {
+                const livePanel = document.getElementById('liveVehicleGrid');
+                if (livePanel) {
+                    livePanel.innerHTML = '<div class="dash-los-empty" style="color:#ef4444;">⚠ Unable to load live vehicle count</div>';
+                }
             }
             const panel = document.getElementById('cameraHealthPanel');
             if (panel) {
@@ -638,6 +647,10 @@
             }
         }
     }
+
+    // ── Vehicle Count UI Elements ────────────────────────────
+    let _lastVehicleData = [];
+    let _countsAreZeroed = false;
 
     function renderLiveVehicleCount(liveVehicleData) {
         const grid = document.getElementById('liveVehicleGrid');
@@ -648,17 +661,58 @@
             return;
         }
 
-        grid.innerHTML = liveVehicleData.map(item => {
+        _lastVehicleData = liveVehicleData;
+
+        grid.innerHTML = liveVehicleData.map((item, i) => {
             const count = Number(item.vehicle_count ?? 0);
             const los = item.los ?? 'A';
 
             return `
                 <div class="dash-los-card">
-                    <span class="dash-los-number" data-count="${count}">${count}</span>
-                    <div class="dash-los-badge los-${los}">${los}</div>
+                    <span class="dash-los-number" id="adm-count-${i}" data-original="${count}">${count}</span>
+                    <div class="dash-los-badge los-${los}" id="adm-los-${i}" data-original-los="${los}">${los}</div>
                     <div class="dash-los-location">${item.location ?? ''}</div>
                 </div>`;
         }).join('');
+    }
+
+    function setVehicleCountsOffline() {
+        if (_countsAreZeroed) return;
+        _countsAreZeroed = true;
+        document.querySelectorAll('[id^="adm-count-"]').forEach(el => {
+            el.textContent = '0';
+            el.style.opacity = '0.45';
+        });
+        document.querySelectorAll('[id^="adm-los-"]').forEach(el => {
+            el.textContent = '—';
+            el.className = 'dash-los-badge';
+            el.style.opacity = '0.45';
+        });
+        const badge = document.querySelector('.stap-live-badge');
+        if (badge && !document.getElementById('adm-offline-note')) {
+            const note = document.createElement('span');
+            note.id = 'adm-offline-note';
+            note.style.cssText = 'font-size:11px;color:#ef4444;font-weight:600;margin-left:8px;';
+            note.textContent = '— Node offline, counts reset to 0';
+            badge.parentNode.insertBefore(note, badge.nextSibling);
+        }
+    }
+
+    function setVehicleCountsOnline() {
+        if (!_countsAreZeroed) return;
+        _countsAreZeroed = false;
+        document.querySelectorAll('[id^="adm-count-"]').forEach(el => {
+            el.textContent = Number(el.dataset.original).toLocaleString();
+            el.style.opacity = '';
+        });
+        document.querySelectorAll('[id^="adm-los-"]').forEach(el => {
+            const los = el.dataset.originalLos || 'A';
+            el.textContent = los;
+            el.className = `dash-los-badge los-${los}`;
+            el.style.opacity = '';
+        });
+        const note = document.getElementById('adm-offline-note');
+        if (note) note.remove();
     }
 
     function renderCameraHealth(cameras) {
@@ -688,18 +742,6 @@
         }).join('');
 
         panel.innerHTML = `<div class="feed-camera-health">${rows}</div>`;
-    }
-
-    async function fetchStatus() {
-        try {
-            const res  = await fetch(`http://${NODE_IP}:5000/status`, { signal: AbortSignal.timeout(2000) });
-            const data = await res.json();
-            renderStatusPanel(data);
-            document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
-        } catch (e) {
-            document.getElementById('statusPanel').innerHTML =
-                '<div style="color:#ef4444;font-size:12px;text-align:center;padding:8px 0;">⚠ Cannot reach STAP Node</div>';
-        }
     }
 
     function renderStatusPanel(data) {
@@ -750,13 +792,18 @@
         `;
     }
 
-    // ── Auto-load on page open if IP already saved ────────────
+    // ── Initializer Loops ─────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
         if (NODE_IP) {
             loadStreams();
-            startStatusPolling();
         }
+        
+        // Execute immediately
+        fetchStatus();
         loadDashboardSummary();
+        
+        // Set up staggered periodic polling loops
+        setInterval(fetchStatus, 3000);
         setInterval(loadDashboardSummary, 10000);
     });
 </script>
