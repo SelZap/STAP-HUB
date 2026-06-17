@@ -22,15 +22,6 @@
             <span class="stap-nav-label">Dashboard</span>
         </a>
 
-        <a href="{{ route('admin.cameras') }}"
-           class="stap-nav-item {{ request()->routeIs('admin.cameras') ? 'active' : '' }}">
-            <svg class="stap-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="7" width="15" height="10" rx="2"/>
-                <path d="M17 9l5-3v12l-5-3"/>
-            </svg>
-            <span class="stap-nav-label">Cameras</span>
-        </a>
-
         <a href="{{ route('admin.traffic-logs') }}"
            class="stap-nav-item {{ request()->routeIs('admin.traffic-logs') ? 'active' : '' }}">
             <svg class="stap-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -19,18 +19,13 @@
     </div>
 
     <div class="stap-card" style="padding:18px 20px;">
-        <div class="stap-text-xs stap-muted" style="font-weight:700;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">Active Alerts</div>
-        <div id="statAlerts" style="font-size:28px;font-weight:800;color:var(--red);">—</div>
-    </div>
-
-    <div class="stap-card" style="padding:18px 20px;">
         <div class="stap-text-xs stap-muted" style="font-weight:700;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">Online Nodes</div>
         <div id="statOnline" style="font-size:28px;font-weight:800;color:var(--green);">—</div>
     </div>
 
 </div>
 
-<div class="stap-grid-2 stap-mt-3">
+<div class="stap-grid-1 stap-mt-3">
 
     {{-- Nodes Status --}}
     <div class="stap-card">
@@ -41,18 +36,6 @@
             <div class="stap-empty">Loading nodes…</div>
         </div>
     </div>
-
-    {{-- Recent Activity --}}
-    <div class="stap-card">
-        <div class="stap-card-header">
-            <span class="stap-card-title">RECENT ACTIVITY</span>
-        </div>
-        <div class="stap-card-body" id="activityBody">
-            <div class="stap-empty">Loading activity…</div>
-        </div>
-    </div>
-
-</div>
 
 @endsection
 

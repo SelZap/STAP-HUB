@@ -1,3 +1,5 @@
+{{-- Not in use --}}
+
 @extends('layouts.admin')
 
 @section('title', 'Cameras')
