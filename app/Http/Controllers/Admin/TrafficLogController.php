@@ -71,7 +71,7 @@ class TrafficLogController extends Controller
   public function importCSV(Request $request)
   {
     $request->validate([
-      'traffic_summary' => 'required|file|mimes:csv,txt',
+      'traffic_summary' => 'required|file',
     ]);
 
     $file = $request->file('traffic_summary');

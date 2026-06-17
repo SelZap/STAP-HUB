@@ -116,17 +116,17 @@
           const lc = losColors[los] ?? 'var(--text-muted)';
           const date = s.captured_at ? new Date(s.captured_at).toLocaleString() : '—';
           return `<tr style="border-bottom:1px solid var(--border);">
-                  <td style="padding:10px 16px;color:var(--text-secondary);font-size:12px;">${date}</td>
-                  <td style="padding:10px 16px;font-weight:600;">${s.camera?.label ?? 'Cam ' + s.camera_id}</td>
-                  <td style="padding:10px 16px;text-align:center;">${s.cars ?? 0}</td>
-                  <td style="padding:10px 16px;text-align:center;">${s.trucks ?? 0}</td>
-                  <td style="padding:10px 16px;text-align:center;">${s.motorcycles ?? 0}</td>
-                  <td style="padding:10px 16px;text-align:center;">${s.jeepney ?? 0}</td>
-                  <td style="padding:10px 16px;text-align:center;font-weight:700;">${total}</td>
-                  <td style="padding:10px 16px;text-align:center;">
-                      <span style="font-size:11px;font-weight:700;color:${lc};background:${lc}1a;padding:2px 8px;border-radius:20px;" title="${losLabels[los] ?? ''}">${los}</span>
-                  </td>
-              </tr>`;
+                    <td style="padding:10px 16px;color:var(--text-secondary);font-size:12px;">${date}</td>
+                    <td style="padding:10px 16px;font-weight:600;">${s.camera?.label ?? 'Cam ' + s.camera_id}</td>
+                    <td style="padding:10px 16px;text-align:center;">${s.cars ?? 0}</td>
+                    <td style="padding:10px 16px;text-align:center;">${s.trucks ?? 0}</td>
+                    <td style="padding:10px 16px;text-align:center;">${s.motorcycles ?? 0}</td>
+                    <td style="padding:10px 16px;text-align:center;">${s.jeepney ?? 0}</td>
+                    <td style="padding:10px 16px;text-align:center;font-weight:700;">${total}</td>
+                    <td style="padding:10px 16px;text-align:center;">
+                        <span style="font-size:11px;font-weight:700;color:${lc};background:${lc}1a;padding:2px 8px;border-radius:20px;" title="${losLabels[los] ?? ''}">${los}</span>
+                    </td>
+                </tr>`;
         }).join('');
 
         // Pagination
@@ -169,19 +169,22 @@
           body: formData
         });
 
+        // Parse the response body first so we can read error contexts if response.ok is false
+        const resData = await response.json();
+
         if (response.ok)
         {
-          alert('Traffic logs imported successfully!');
+          alert(resData.message || 'Traffic logs imported successfully!');
           loadLogs(1);
         } else
         {
-          const errData = await response.json();
-          alert('Failed to import logs: ' + (errData.message || 'Error parsing file.'));
+          // Show the exact exception message returned from TrafficLogController's catch block
+          alert('Failed to import logs: ' + (resData.message || 'Unknown backend parsing failure.'));
         }
       } catch (error)
       {
         console.error('Import error:', error);
-        alert('An error occurred during the file import.');
+        alert('A network or execution error occurred during the file import.');
       } finally
       {
         input.value = '';
