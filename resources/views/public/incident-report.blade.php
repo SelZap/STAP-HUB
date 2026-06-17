@@ -156,22 +156,11 @@
                 <span class="ir-card-title">Witness &amp; Authorities</span>
             </div>
 
-            <div class="ir-grid-2">
-                <div class="stap-form-group">
-                    <label class="stap-form-label" for="reporting_party_name">Name of Reporting Party <span class="ir-req">*</span></label>
-                    <input type="email" id="reporting_party_name" name="reporting_party_name"
-                           class="stap-form-input" placeholder="Full name" required>
-                    <span class="ir-err" id="err_reporting_party_name"></span>
-                </div>
-                <div class="stap-form-group">
-                    <label class="stap-form-label" for="reporter_email">
-                        Email Address <span class="ir-optional">(Optional)</span>
-                    </label>
-                    <input type="email" id="reporter_email" name="reporter_email"
-                           class="stap-form-input" placeholder="your@email.com">
-                    <span class="ir-err" id="err_reporter_email"></span>
-                    <span class="ir-muted" style="font-size:11px;margin-top:4px;display:block;">If provided, a confirmation will be sent to you.</span>
-                </div>
+            <div class="stap-form-group">
+                <label class="stap-form-label" for="reporting_party_name">Name of Reporting Party <span class="ir-req">*</span></label>
+                <input type="text" id="reporting_party_name" name="reporting_party_name"
+                       class="stap-form-input" placeholder="Full name" required>
+                <span class="ir-err" id="err_reporting_party_name"></span>
             </div>
         </div>
 
@@ -190,8 +179,7 @@
 
 @push('scripts')
 <script>
-    window.STAP_INCIDENT_ROUTE       = '{{ route("incident.store") }}';
-    window.STAP_EMAIL_VALIDATE_ROUTE = '{{ route("incident.validate-email") }}';
+    window.STAP_INCIDENT_ROUTE = '{{ route("incident.store") }}';
 </script>
 <script src="{{ asset('js/incident-report.js') }}"></script>
 @endpush
