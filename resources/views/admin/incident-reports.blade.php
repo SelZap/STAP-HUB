@@ -168,21 +168,7 @@ async function viewReport(id) {
             '<button onclick="toggleEmailCompose(' + rid + ')" id="emailToggleBtn_' + rid + '" class="stap-btn-primary" style="font-size:13px;padding:9px 20px;background:var(--navy-muted);margin-left:auto;"' + (!hasEmail ? ' disabled title="No email on file"' : '') + '>' +
                 '✉ Send Email to Reporter' + (!hasEmail ? ' <span style="opacity:.6;">(no email)</span>' : '') +
             '</button>' +
-        '</div>' +
-
-        '<div id="emailCompose_' + rid + '" style="display:none;">' +
-            '<div class="ir-email-box">' +
-                '<div class="ir-email-box-title">Compose Email to ' + (r.reporter_email ?? 'Reporter') + '</div>' +
-                '<div class="stap-form-group"><label class="stap-form-label">Subject</label>' +
-                    '<input type="text" id="emailSubject_' + rid + '" class="stap-form-input" value="Re: STAP Hub Incident Report #' + rid + '">' +
-                '</div>' +
-                '<div class="stap-form-group"><label class="stap-form-label">Message</label>' +
-                    '<textarea id="emailBody_' + rid + '" class="stap-form-input" rows="9" style="font-family:monospace;font-size:12px;">' + escapeHtml(buildEmailTemplate(r)) + '</textarea>' +
-                '</div>' +
-                '<div id="emailResult_' + rid + '" style="display:none;font-size:12px;font-weight:600;padding:10px 14px;border-radius:8px;margin-bottom:10px;"></div>' +
-                '<button onclick="sendEmailToReporter(' + rid + ')" id="sendEmailBtn_' + rid + '" class="stap-btn-primary" style="font-size:13px;padding:9px 20px;">Send Email</button>' +
-            '</div>' +
-        '</div>';
+        '</div>'    ;
 
     document.getElementById('reportModalContent').innerHTML = html;
 }
@@ -200,62 +186,6 @@ function buildEmailTemplate(r) {
         'Current Status: ' + (r.status ?? '').toUpperCase() + '\n\n' +
         '[Add your message or updates here.]\n\n' +
         'Regards,\nSTAP Hub Administration';
-}
-
-function toggleEmailCompose(id) {
-    const el  = document.getElementById('emailCompose_' + id);
-    const btn = document.getElementById('emailToggleBtn_' + id);
-    const isHidden = el.style.display === 'none' || el.style.display === '';
-    el.style.display = isHidden ? 'block' : 'none';
-    if (btn) btn.textContent = isHidden ? '✕ Cancel Email' : '✉ Send Email to Reporter';
-}
-
-async function sendEmailToReporter(id) {
-    const subject  = document.getElementById('emailSubject_' + id)?.value?.trim();
-    const body     = document.getElementById('emailBody_' + id)?.value?.trim();
-    const resultEl = document.getElementById('emailResult_' + id);
-    const sendBtn  = document.getElementById('sendEmailBtn_' + id);
-
-    if (!subject || !body) {
-        resultEl.style.display    = 'block';
-        resultEl.style.background = '#fee2e2';
-        resultEl.style.color      = '#991b1b';
-        resultEl.textContent      = 'Subject and message are required.';
-        return;
-    }
-
-    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…'; }
-
-    try {
-        // FIX: use jsonHeaders() so Content-Type: application/json is included
-        const res  = await fetch('/admin/incident-reports/' + id + '/email', {
-            method:      'POST',
-            headers:     jsonHeaders(),
-            credentials: 'same-origin',
-            body:        JSON.stringify({ subject, body }),
-        });
-        const data = await res.json();
-
-        resultEl.style.display    = 'block';
-        resultEl.style.background = res.ok ? '#dcfce7' : '#fee2e2';
-        resultEl.style.color      = res.ok ? '#166534' : '#991b1b';
-        resultEl.textContent      = data.message ?? (res.ok ? 'Email sent!' : 'Error sending.');
-
-        if (res.ok) {
-            setTimeout(() => {
-                document.getElementById('emailCompose_' + id).style.display = 'none';
-                const btn = document.getElementById('emailToggleBtn_' + id);
-                if (btn) btn.textContent = '✉ Send Email to Reporter';
-            }, 1500);
-        }
-    } catch(e) {
-        resultEl.style.display    = 'block';
-        resultEl.style.background = '#fee2e2';
-        resultEl.style.color      = '#991b1b';
-        resultEl.textContent      = 'Network error. Please try again.';
-    }
-
-    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send Email'; }
 }
 
 async function markReviewed(id, btn) {

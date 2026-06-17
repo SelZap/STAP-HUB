@@ -240,60 +240,6 @@ function buildRejectTemplate(r) {
     return 'Dear ' + name + ',\n\nWe regret to inform you that your footage request (Request #' + r.request_id + ') has not been approved at this time.\n\nRequest Details:\n  Nature: ' + (r.request_nature ?? '—') + '\n  Footage Date: ' + date + '\n  Time Range: ' + (r.footage_time_start ?? '—') + ' – ' + (r.footage_time_end ?? '—') + '\n\nReason for Rejection:\n  [Please state the reason(s) here]\n\nIf you believe this was made in error or would like to resubmit, please contact us.\n\nWe apologize for any inconvenience.\n\nRegards,\nSTAP Hub Administration\nMayor Gil Fernando Ave / Sumulong Highway, Marikina City';
 }
 
-async function updateStatus(id, status, sendEmail) {
-    const resultEl = document.getElementById('emailResult_' + id);
-
-    try {
-        // FIX: pass true so Content-Type: application/json is set
-        const res  = await fetch('/admin/requests/' + id + '/status', {
-            method: 'POST',
-            headers: buildHeaders(true),
-            credentials: 'same-origin',
-            body: JSON.stringify({ status }),
-        });
-        const data = await res.json();
-        if (!res.ok) { alert(data.message ?? 'Error updating status.'); return; }
-
-        if (sendEmail) {
-            const subject = document.getElementById('emailSubject_' + id)?.value?.trim();
-            const body    = document.getElementById('emailBody_' + id)?.value?.trim();
-            if (subject && body) {
-                if (resultEl) {
-                    resultEl.style.display    = 'block';
-                    resultEl.style.background = '#f1f5f9';
-                    resultEl.style.color      = '#475569';
-                    resultEl.textContent      = 'Sending email…';
-                }
-                // FIX: pass true so Content-Type: application/json is set
-                const emailRes  = await fetch('/admin/requests/' + id + '/email', {
-                    method: 'POST',
-                    headers: buildHeaders(true),
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ subject, body }),
-                });
-                const emailData = await emailRes.json();
-
-                if (resultEl) {
-                    resultEl.style.display    = 'block';
-                    resultEl.style.background = emailRes.ok ? '#dcfce7' : '#fee2e2';
-                    resultEl.style.color      = emailRes.ok ? '#166534' : '#991b1b';
-                    resultEl.textContent      = emailData.message ?? (emailRes.ok ? 'Email sent!' : 'Status updated but email failed.');
-                }
-
-                if (emailRes.ok) {
-                    setTimeout(() => { closeModal(); loadRequests(); }, 1800);
-                    return;
-                }
-            }
-        }
-
-        closeModal();
-        loadRequests();
-    } catch (e) {
-        console.error('updateStatus:', e);
-        alert('Request failed. Please try again.');
-    }
-}
 
 function closeModal() {
     document.getElementById('reqModal').classList.remove('is-open');
