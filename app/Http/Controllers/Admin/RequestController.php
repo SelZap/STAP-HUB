@@ -8,8 +8,8 @@ use App\Models\AdminActivityLog;
 use App\Mail\FootageRequestMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class RequestController extends Controller
 {
@@ -38,6 +38,7 @@ class RequestController extends Controller
 
     public function show(int|string $request_id)
     {
+        // 'messages' relationship removed — foreign key mismatch on request_messages table
         $footageRequest = FootageRequest::with('handler:admin_id,admin_name')
             ->where('request_id', $request_id)
             ->firstOrFail();
@@ -82,43 +83,34 @@ class RequestController extends Controller
         $footageRequest = FootageRequest::where('request_id', $id)->firstOrFail();
 
         if (! $footageRequest->requester_email) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This request has no email address on file.',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'This request has no email address on file.'], 422);
         }
 
+        // ── Wrapped in try/catch so SMTP failures return a real error message ──
+        // instead of bubbling up as a generic 500. Without this, a bad mail
+        // config on Render just looks like "request failed" with no clue why.
         try {
             Mail::raw($request->body, function ($m) use ($footageRequest, $request) {
-                $m->to($footageRequest->requester_email)
-                  ->subject($request->subject)
-                  ->from(
-                      config('mail.from.address', 'noreply@staphub.local'),
-                      config('mail.from.name', 'STAP Hub')
-                  );
+                $m->to($footageRequest->requester_email)->subject($request->subject);
             });
-
-            AdminActivityLog::create([
-                'admin_id'     => Auth::guard('admin')->user()->admin_id,
-                'target_type'  => 'footage_request',
-                'target_id'    => $footageRequest->request_id,
-                'target_label' => 'Footage Request #' . $footageRequest->request_id,
-                'details'      => 'Email sent to ' . $footageRequest->requester_email,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Email sent successfully.',
-            ]);
-
         } catch (\Exception $e) {
-            Log::error('Footage request email failed for request #' . $id . ': ' . $e->getMessage());
+            Log::error('Admin sendEmail (footage request) failed: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send email: ' . $e->getMessage(),
+                'message' => 'Email failed to send: ' . $e->getMessage(),
             ], 500);
         }
+
+        AdminActivityLog::create([
+            'admin_id'     => Auth::guard('admin')->user()->admin_id,
+            'target_type'  => 'footage_request',
+            'target_id'    => $footageRequest->request_id,
+            'target_label' => 'Footage Request #' . $footageRequest->request_id,
+            'details'      => 'Email sent to ' . $footageRequest->requester_email,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Email sent successfully.']);
     }
 
     public function sendRequirements(Request $request, int|string $id)
