@@ -5,7 +5,7 @@
 
 @section('content')
 
-  {{-- Filters & Actions --}}
+  {{-- Filters --}}
   <div class="stap-card stap-mb-2" style="padding:16px 20px;">
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
       <div>
@@ -18,16 +18,6 @@
       </div>
       <button class="stap-btn-primary" onclick="loadLogs()">Apply Filter</button>
       <button class="stap-btn-primary" style="background:var(--navy-muted);" onclick="clearFilters()">Clear</button>
-
-      {{-- Import CSV Button Action --}}
-      <div style="margin-left: 12px;">
-        <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCSVUpload(this)">
-        <button class="stap-btn-primary" style="background:var(--green, #28a745);"
-          onclick="document.getElementById('csvFileInput').click()">
-          Import CSV
-        </button>
-      </div>
-
       <span id="logCount" class="stap-text-xs stap-muted" style="margin-left:auto;align-self:center;"></span>
     </div>
   </div>
@@ -35,7 +25,18 @@
   {{-- Table --}}
   <div class="stap-card">
     <div class="stap-card-body" style="padding:0;overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      {{-- Added table-layout: fixed to keep columns perfectly locked in width --}}
+      <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:800px;">
+        <colgroup>
+          <col style="width: 22%;"> {{-- Time --}}
+          <col style="width: 13%;"> {{-- Camera --}}
+          <col style="width: 10%;"> {{-- Cars --}}
+          <col style="width: 10%;"> {{-- Trucks --}}
+          <col style="width: 13%;"> {{-- Motorcycles --}}
+          <col style="width: 11%;"> {{-- Jeepney --}}
+          <col style="width: 11%;"> {{-- Total --}}
+          <col style="width: 10%;"> {{-- LOS --}}
+        </colgroup>
         <thead>
           <tr style="border-bottom:1px solid var(--border);background:var(--bg-input);">
             <th
@@ -66,13 +67,14 @@
         </thead>
         <tbody id="logsBody">
           <tr>
-            <td colspan="8" class="stap-empty" style="padding:28px;">Loading…</td>
+            <td colspan="8" class="stap-empty" style="padding:28px;text-align:center;">Loading…</td>
           </tr>
         </tbody>
       </table>
     </div>
     <div id="pagination"
-      style="padding:14px 20px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);"></div>
+      style="padding:14px 20px;display:flex;gap:4px;justify-content:flex-end;border-top:1px solid var(--border);flex-wrap:wrap;">
+    </div>
   </div>
 
 @endsection
@@ -88,17 +90,16 @@
       currentPage = page;
       const from = document.getElementById('filterFrom').value;
       const to = document.getElementById('filterTo').value;
-
       let url = `/admin/api/traffic-logs?page=${page}`;
       if (from) url += `&date_from=${from}`;
       if (to) url += `&date_to=${to}`;
 
       const body = document.getElementById('logsBody');
-      body.innerHTML = '<tr><td colspan="8" class="stap-empty" style="padding:28px;">Loading…</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="stap-empty" style="padding:28px;text-align:center;">Loading…</td></tr>';
 
       try
       {
-        const res = await fetch(url);
+        const res = await fetch(url, { headers: authHeaders() });
         const data = await res.json();
         const rows = data.data ?? [];
 
@@ -106,89 +107,106 @@
 
         if (!rows.length)
         {
-          body.innerHTML = '<tr><td colspan="8" class="stap-empty" style="padding:28px;">No records found.</td></tr>';
+          body.innerHTML = '<tr><td colspan="8" class="stap-empty" style="padding:28px;text-align:center;">No records found.</td></tr>';
           return;
         }
 
         body.innerHTML = rows.map(s => {
-          const total = (s.cars || 0) + (s.trucks || 0) + (s.motorcycles || 0) + (s.jeepney || 0);
-          const los = s.congestion ?? '—';
+          const total = (s.cars || 0) + (s.trucks || 0) + (s.motorcycles || 0) + (s.mini_bus || 0) + (s.ambulance || 0) + (s.fire_truck || 0) + (s.tricycle || 0) + (s.jeepney || 0);
+
+          // 1. FIX DATE: Try created_at, fallback to updated_at, timestamp, or logged_at
+          const rawDate = s.created_at ?? s.updated_at ?? s.timestamp ?? s.logged_at;
+          let dateStr = '—';
+          if (rawDate)
+          {
+            const d = new Date(rawDate);
+            dateStr = isNaN(d.getTime()) ? rawDate : d.toLocaleString();
+          }
+
+          // 2. FIX LOS: Check if the backend returns it as 'los' or 'congestion'
+          const los = s.los ?? s.congestion ?? '—';
           const lc = losColors[los] ?? 'var(--text-muted)';
-          const date = s.captured_at ? new Date(s.captured_at).toLocaleString() : '—';
+
           return `<tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:10px 16px;color:var(--text-secondary);font-size:12px;">${date}</td>
-                    <td style="padding:10px 16px;font-weight:600;">${s.camera?.label ?? 'Cam ' + s.camera_id}</td>
-                    <td style="padding:10px 16px;text-align:center;">${s.cars ?? 0}</td>
-                    <td style="padding:10px 16px;text-align:center;">${s.trucks ?? 0}</td>
-                    <td style="padding:10px 16px;text-align:center;">${s.motorcycles ?? 0}</td>
-                    <td style="padding:10px 16px;text-align:center;">${s.jeepney ?? 0}</td>
-                    <td style="padding:10px 16px;text-align:center;font-weight:700;">${total}</td>
-                    <td style="padding:10px 16px;text-align:center;">
-                        <span style="font-size:11px;font-weight:700;color:${lc};background:${lc}1a;padding:2px 8px;border-radius:20px;" title="${losLabels[los] ?? ''}">${los}</span>
-                    </td>
-                </tr>`;
+              <td style="padding:10px 16px;color:var(--text-secondary);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${dateStr}</td>
+              <td style="padding:10px 16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.camera?.label ?? 'Cam ' + s.camera_id}</td>
+              <td style="padding:10px 16px;text-align:center;">${s.cars ?? 0}</td>
+              <td style="padding:10px 16px;text-align:center;">${s.trucks ?? 0}</td>
+              <td style="padding:10px 16px;text-align:center;">${s.motorcycles ?? 0}</td>
+              <td style="padding:10px 16px;text-align:center;">${s.jeepney ?? 0}</td>
+              <td style="padding:10px 16px;text-align:center;font-weight:700;">${total}</td>
+              <td style="padding:10px 16px;text-align:center;">
+                  <span style="font-size:11px;font-weight:700;color:${lc};background:${lc}1a;padding:2px 8px;border-radius:20px;" title="${losLabels[los] ?? ''}">${los}</span>
+              </td>
+          </tr>`;
         }).join('');
 
-        // Pagination
-        const pg = document.getElementById('pagination');
-        const lastPage = data.last_page ?? 1;
-        pg.innerHTML = '';
-        for (let i = 1; i <= lastPage; i++)
+        // Smart Windowed Pagination Layout (prevents rendering 48+ buttons out-of-bounds)
+        renderPagination(data.last_page ?? 1);
+
+      } catch (e)
+      {
+        console.error(e);
+        body.innerHTML = '<tr><td colspan="8" class="stap-empty" style="padding:28px;text-align:center;color:var(--red);">Failed to load data.</td></tr>';
+      }
+    }
+
+    function renderPagination(lastPage) {
+      const pg = document.getElementById('pagination');
+      pg.innerHTML = '';
+
+      if (lastPage <= 1) return;
+
+      const range = 2; // Number of page buttons to display on either side of active item
+      let pages = [];
+
+      // Always include page 1
+      pages.push(1);
+
+      if (currentPage - range > 2)
+      {
+        pages.push('...');
+      }
+
+      for (let i = Math.max(2, currentPage - range); i <= Math.min(lastPage - 1, currentPage + range); i++)
+      {
+        pages.push(i);
+      }
+
+      if (currentPage + range < lastPage - 1)
+      {
+        pages.push('...');
+      }
+
+      // Always include last page
+      if (lastPage > 1)
+      {
+        pages.push(lastPage);
+      }
+
+      pages.forEach(p => {
+        if (p === '...')
+        {
+          const span = document.createElement('span');
+          span.textContent = '...';
+          span.style.cssText = 'padding:5px 8px;color:var(--text-muted);font-size:12px;align-self:center;';
+          pg.appendChild(span);
+        } else
         {
           const btn = document.createElement('button');
-          btn.textContent = i;
+          btn.textContent = p;
           btn.className = 'stap-btn-primary';
-          btn.style.cssText = `padding:5px 11px;font-size:11px;${i === currentPage ? '' : 'background:var(--navy-light);color:var(--navy);'}`;
-          btn.onclick = () => loadLogs(i);
+          btn.style.cssText = `padding:5px 11px;font-size:11px;min-width:32px;${p === currentPage ? '' : 'background:var(--navy-light);color:var(--navy);'}`;
+          btn.onclick = () => loadLogs(p);
           pg.appendChild(btn);
         }
-
-      } catch (e) { console.error(e); }
+      });
     }
 
     function clearFilters() {
       document.getElementById('filterFrom').value = '';
       document.getElementById('filterTo').value = '';
-      loadLogs(1);
-    }
-
-    async function handleCSVUpload(input) {
-      const file = input.files[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append('traffic_summary', file);
-
-      try
-      {
-        const response = await fetch('/admin/api/traffic-logs/import', {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
-          },
-          body: formData
-        });
-
-        // Parse the response body first so we can read error contexts if response.ok is false
-        const resData = await response.json();
-
-        if (response.ok)
-        {
-          alert(resData.message || 'Traffic logs imported successfully!');
-          loadLogs(1);
-        } else
-        {
-          // Show the exact exception message returned from TrafficLogController's catch block
-          alert('Failed to import logs: ' + (resData.message || 'Unknown backend parsing failure.'));
-        }
-      } catch (error)
-      {
-        console.error('Import error:', error);
-        alert('A network or execution error occurred during the file import.');
-      } finally
-      {
-        input.value = '';
-      }
+      loadLogs();
     }
 
     loadLogs();
