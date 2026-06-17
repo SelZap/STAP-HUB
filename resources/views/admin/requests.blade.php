@@ -68,18 +68,18 @@
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
-function buildHeaders(json) {
+// FIX: actually use the json parameter to set Content-Type when sending JSON bodies
+function buildHeaders(includeJson = false) {
     const h = { ...authHeaders() };
-    if (json) h['Content-Type'] = 'application/json';
+    if (includeJson) h['Content-Type'] = 'application/json';
     return h;
 }
 
 const statusColors = {
-    pending:           'var(--amber)',
-    reviewed:          'var(--navy-muted)',
-    requirements_sent: 'var(--navy)',
-    approved:          'var(--green)',
-    rejected:          'var(--red)',
+    pending:    'var(--amber)',
+    under_review: 'var(--navy-muted)',
+    approved:   'var(--green)',
+    rejected:   'var(--red)',
 };
 
 let currentTab     = 'new';
@@ -176,7 +176,7 @@ async function viewRequest(id) {
         html += '<div class="req-actions">' +
             (r.status !== 'approved' ? '<button onclick="showEmailCompose(' + r.request_id + ', \'approved\')" class="stap-btn-primary stap-btn-green" style="font-size:13px;padding:9px 20px;">✓ Approve</button>' : '') +
             (r.status !== 'rejected' ? '<button onclick="showEmailCompose(' + r.request_id + ', \'rejected\')" class="stap-btn-primary" style="background:var(--red);font-size:13px;padding:9px 20px;">✗ Reject</button>' : '') +
-            (r.status !== 'reviewed' ? '<button onclick="updateStatus(' + r.request_id + ', \'reviewed\', false)" class="stap-btn-primary" style="background:var(--navy-muted);font-size:13px;padding:9px 20px;">Mark Reviewed</button>' : '') +
+            (r.status !== 'under_review' ? '<button onclick="updateStatus(' + r.request_id + ', \'under_review\', false)" class="stap-btn-primary" style="background:var(--navy-muted);font-size:13px;padding:9px 20px;">Mark Under Review</button>' : '') +
         '</div>';
 
         html += '<div id="emailComposeWrap_' + r.request_id + '" style="display:none;margin-top:14px;"></div>';
@@ -199,7 +199,6 @@ function showEmailCompose(id, decision) {
         ? 'Your Footage Request #' + id + ' has been Approved — STAP Hub'
         : 'Update on Your Footage Request #' + id + ' — STAP Hub';
     const template  = isApprove ? buildApproveTemplate(r) : buildRejectTemplate(r);
-    const color     = isApprove ? '#22c55e' : '#ef4444';
     const boxClass  = isApprove ? 'req-email-approve' : 'req-email-reject';
     const btnLabel  = isApprove ? '✓ Confirm Approval &amp; Send Email' : '✗ Confirm Rejection &amp; Send Email';
     const btnStyle  = isApprove ? 'background:var(--green);' : 'background:var(--red);';
@@ -238,23 +237,26 @@ function buildApproveTemplate(r) {
 function buildRejectTemplate(r) {
     const name = r.requester_name ?? 'Requester';
     const date = r.footage_date ?? (r.footage_date_start ? r.footage_date_start + ' to ' + r.footage_date_end : '—');
-    return 'Dear ' + name + ',\n\nWe regret to inform you that your footage request (Request #' + r.request_id + ') has not been approved at this time.\n\nRequest Details:\n  Nature: ' + (r.request_nature ?? '—') + '\n  Footage Date: ' + date + '\n  Time Range: ' + (r.footage_time_start ?? '—') + ' – ' + (r.footage_time_end ?? '—') + '\n\nReason for Rejection:\n  [Please state the reason(s) here, e.g.:\n   - The requested footage is no longer available.\n   - The request does not meet requirements for footage release.\n   - Insufficient documentation provided.\n   - Other: ___________________]\n\nIf you believe this was made in error or would like to resubmit, please contact us.\n\nWe apologize for any inconvenience.\n\nRegards,\nSTAP Hub Administration\nMayor Gil Fernando Ave / Sumulong Highway, Marikina City';
+    return 'Dear ' + name + ',\n\nWe regret to inform you that your footage request (Request #' + r.request_id + ') has not been approved at this time.\n\nRequest Details:\n  Nature: ' + (r.request_nature ?? '—') + '\n  Footage Date: ' + date + '\n  Time Range: ' + (r.footage_time_start ?? '—') + ' – ' + (r.footage_time_end ?? '—') + '\n\nReason for Rejection:\n  [Please state the reason(s) here]\n\nIf you believe this was made in error or would like to resubmit, please contact us.\n\nWe apologize for any inconvenience.\n\nRegards,\nSTAP Hub Administration\nMayor Gil Fernando Ave / Sumulong Highway, Marikina City';
 }
 
 async function updateStatus(id, status, sendEmail) {
     const resultEl = document.getElementById('emailResult_' + id);
 
     try {
+        // FIX: pass true so Content-Type: application/json is set
         const res  = await fetch('/admin/requests/' + id + '/status', {
-            method: 'POST', headers: buildHeaders(true), credentials: 'same-origin',
+            method: 'POST',
+            headers: buildHeaders(true),
+            credentials: 'same-origin',
             body: JSON.stringify({ status }),
         });
         const data = await res.json();
         if (!res.ok) { alert(data.message ?? 'Error updating status.'); return; }
 
         if (sendEmail) {
-            const subject = document.getElementById('emailSubject_' + id)?.value;
-            const body    = document.getElementById('emailBody_' + id)?.value;
+            const subject = document.getElementById('emailSubject_' + id)?.value?.trim();
+            const body    = document.getElementById('emailBody_' + id)?.value?.trim();
             if (subject && body) {
                 if (resultEl) {
                     resultEl.style.display    = 'block';
@@ -262,27 +264,23 @@ async function updateStatus(id, status, sendEmail) {
                     resultEl.style.color      = '#475569';
                     resultEl.textContent      = 'Sending email…';
                 }
+                // FIX: pass true so Content-Type: application/json is set
                 const emailRes  = await fetch('/admin/requests/' + id + '/email', {
-                    method: 'POST', headers: buildHeaders(true), credentials: 'same-origin',
+                    method: 'POST',
+                    headers: buildHeaders(true),
+                    credentials: 'same-origin',
                     body: JSON.stringify({ subject, body }),
                 });
                 const emailData = await emailRes.json();
 
                 if (resultEl) {
+                    resultEl.style.display    = 'block';
                     resultEl.style.background = emailRes.ok ? '#dcfce7' : '#fee2e2';
                     resultEl.style.color      = emailRes.ok ? '#166534' : '#991b1b';
                     resultEl.textContent      = emailData.message ?? (emailRes.ok ? 'Email sent!' : 'Status updated but email failed.');
                 }
 
                 if (emailRes.ok) {
-                    // Hide compose, reset button back to "Send Email to Reporter" state
-                    const wrap = document.getElementById('emailComposeWrap_' + id);
-                    if (wrap) {
-                        setTimeout(() => {
-                            wrap.style.display = 'none';
-                            wrap.innerHTML     = '';
-                        }, 1500);
-                    }
                     setTimeout(() => { closeModal(); loadRequests(); }, 1800);
                     return;
                 }

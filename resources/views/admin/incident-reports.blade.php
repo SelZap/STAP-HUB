@@ -46,8 +46,7 @@
 
 @push('scripts')
 <script>
-const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
-
+// FIX: actually set Content-Type: application/json when sending JSON
 function jsonHeaders() {
     return { ...authHeaders(), 'Content-Type': 'application/json' };
 }
@@ -228,6 +227,7 @@ async function sendEmailToReporter(id) {
     if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…'; }
 
     try {
+        // FIX: use jsonHeaders() so Content-Type: application/json is included
         const res  = await fetch('/admin/incident-reports/' + id + '/email', {
             method:      'POST',
             headers:     jsonHeaders(),
@@ -242,7 +242,6 @@ async function sendEmailToReporter(id) {
         resultEl.textContent      = data.message ?? (res.ok ? 'Email sent!' : 'Error sending.');
 
         if (res.ok) {
-            // Hide compose and reset button after success
             setTimeout(() => {
                 document.getElementById('emailCompose_' + id).style.display = 'none';
                 const btn = document.getElementById('emailToggleBtn_' + id);
