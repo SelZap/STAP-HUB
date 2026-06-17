@@ -4,13 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Services\CloudinaryService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class AnnouncementController extends Controller
 {
+    protected CloudinaryService $cloudinary;
+
+    public function __construct(CloudinaryService $cloudinary)
+    {
+        $this->cloudinary = $cloudinary;
+    }
+
     public function active()
     {
         $announcements = Announcement::active()
@@ -69,12 +77,24 @@ class AnnouncementController extends Controller
             }
         }
 
+        // ── Attachment now goes straight to Cloudinary instead of local disk. ──
+        // Render's filesystem is ephemeral and wiped on every redeploy/restart,
+        // so anything saved with Storage::disk('public') disappears almost
+        // immediately. Cloudinary gives us a permanent, publicly reachable URL
+        // that we store directly in attachment_path.
         $attachmentPath = null;
         $attachmentName = null;
         if ($request->hasFile('attachment') && $request->file('attachment')->isValid()) {
             $file           = $request->file('attachment');
             $attachmentName = $file->getClientOriginalName();
-            $attachmentPath = $file->store('announcements', 'public');
+            $attachmentPath = $this->cloudinary->uploadFile($file, 'stap-hub/announcements');
+
+            if (! $attachmentPath) {
+                Log::warning('Announcement attachment upload to Cloudinary failed for: ' . $attachmentName);
+                return response()->json([
+                    'message' => 'Failed to upload attachment to Cloudinary. The announcement was not created.',
+                ], 422);
+            }
         }
 
         $announcement = Announcement::create([
@@ -85,7 +105,7 @@ class AnnouncementController extends Controller
             'expires_at'         => $expiresAt,
             'is_active'          => filter_var($request->input('is_active', true), FILTER_VALIDATE_BOOLEAN),
             'incident_report_id' => $request->input('incident_report_id') ?: null,
-            'attachment_path'    => $attachmentPath,
+            'attachment_path'    => $attachmentPath, // now a full Cloudinary secure_url
             'attachment_name'    => $attachmentName,
         ]);
 
@@ -109,9 +129,11 @@ class AnnouncementController extends Controller
     {
         $announcement = Announcement::findOrFail($id);
 
-        if ($announcement->attachment_path) {
-            Storage::disk('public')->delete($announcement->attachment_path);
-        }
+        // Note: attachment_path is now a Cloudinary URL, not a local disk path,
+        // so Storage::disk('public')->delete() no longer applies here. If you
+        // want to also remove the asset from Cloudinary on delete, extract the
+        // public_id from the URL and call $this->cloudinary->delete($publicId).
+        // Left as a no-op for now to avoid accidentally deleting shared assets.
 
         $announcement->delete();
 
@@ -120,9 +142,10 @@ class AnnouncementController extends Controller
 
     private function withUrl($a)
     {
-        $a->attachment_url = $a->attachment_path
-            ? asset('storage/' . $a->attachment_path)
-            : null;
+        // attachment_path is now already a full Cloudinary URL (set in store()),
+        // so we just pass it straight through instead of building an asset()
+        // path against local storage.
+        $a->attachment_url = $a->attachment_path ?: null;
 
         return $a;
     }

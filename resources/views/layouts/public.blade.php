@@ -87,6 +87,31 @@
         .stap-ann-msg   { display: block; opacity: 0.88; font-size: 12.5px; }
         .stap-ann-meta  { display: block; font-size: 11px; opacity: 0.55; margin-top: 5px; }
 
+        /* ── Attachment preview ── */
+        .stap-ann-attachment-img {
+            display: block;
+            width: 100%;
+            max-height: 140px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .stap-ann-attachment-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 8px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: inherit;
+            opacity: 0.85;
+            text-decoration: underline;
+        }
+        .stap-ann-attachment-link:hover { opacity: 1; }
+
         .stap-ann-close {
             background: rgba(255, 255, 255, 0.12);
             border: none;
@@ -151,6 +176,16 @@
         emergency:   '⚠️',
     };
 
+    // Extensions we treat as an inline image preview. Anything else
+    // (mp4, pdf) falls back to a plain attachment link instead.
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+    function isImageAttachment(url, name) {
+        const source = (name || url || '').toLowerCase();
+        const ext = source.split('.').pop();
+        return imageExtensions.includes(ext);
+    }
+
     const dismissed = JSON.parse(sessionStorage.getItem('stap_dismissed_ann') || '[]');
     const stack = document.getElementById('stap-ann-stack');
 
@@ -164,6 +199,26 @@
             : '';
         const meta = [expires, incident].filter(Boolean).join(' · ');
 
+        // ── Attachment block ──
+        // a.attachment_url is the Cloudinary secure_url set server-side
+        // (see AnnouncementController::withUrl()). If it's an image, show
+        // an inline thumbnail that opens the full image in a new tab when
+        // clicked. Otherwise (video/pdf), show a plain download/view link.
+        let attachmentHtml = '';
+        if (a.attachment_url) {
+            if (isImageAttachment(a.attachment_url, a.attachment_name)) {
+                attachmentHtml = `
+                    <a href="${a.attachment_url}" target="_blank" rel="noopener">
+                        <img class="stap-ann-attachment-img" src="${a.attachment_url}" alt="${a.attachment_name ?? 'Attachment'}" loading="lazy">
+                    </a>`;
+            } else {
+                attachmentHtml = `
+                    <a class="stap-ann-attachment-link" href="${a.attachment_url}" target="_blank" rel="noopener">
+                        📎 ${a.attachment_name ?? 'View Attachment'}
+                    </a>`;
+            }
+        }
+
         const card = document.createElement('div');
         card.className = `stap-ann-card type-${a.type}`;
         card.id = `ann-${a.announcement_id}`;
@@ -172,6 +227,7 @@
             <div class="stap-ann-body">
                 <span class="stap-ann-title">${a.title}</span>
                 <span class="stap-ann-msg">${a.content}</span>
+                ${attachmentHtml}
                 ${meta ? `<span class="stap-ann-meta">${meta}</span>` : ''}
             </div>
             <button class="stap-ann-close" title="Dismiss">✕</button>

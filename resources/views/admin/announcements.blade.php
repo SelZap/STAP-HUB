@@ -35,7 +35,7 @@
         </div>
 
         <div class="stap-form-group">
-            <label class="stap-form-label">Attachment <span style="font-weight:400;color:var(--text-muted);">(Optional — image, video, or PDF)</span></label>
+            <label class="stap-form-label">Attachment <span style="font-weight:400;color:var(--text-muted);">(Optional — image)</span></label>
             <input type="file" id="aAttachment" class="stap-form-input" accept="image/*,video/mp4,.pdf" style="padding:8px;cursor:pointer;">
             <div id="aAttachmentName" style="font-size:11px;color:var(--text-muted);margin-top:4px;display:none;"></div>
         </div>

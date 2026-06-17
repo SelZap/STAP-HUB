@@ -18,6 +18,8 @@ class Announcement extends Model
         'content',
         'is_active',
         'expires_at',
+        'attachment_path',
+        'attachment_name',
     ];
 
     protected function casts(): array
