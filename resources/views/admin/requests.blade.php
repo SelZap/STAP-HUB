@@ -72,10 +72,11 @@ function buildHeaders(includeJson = false) {
 }
 
 const statusColors = {
-    pending:    'var(--amber)',
-    under_review: 'var(--navy-muted)',
-    approved:   'var(--green)',
-    rejected:   'var(--red)',
+    pending:            'var(--amber)',
+    reviewed:           'var(--navy-muted)',
+    requirements_sent:  'var(--navy-muted)',
+    approved:           'var(--green)',
+    rejected:           'var(--red)',
 };
 
 let currentTab     = 'new';
@@ -172,13 +173,34 @@ async function viewRequest(id) {
         html += '<div class="req-actions">' +
             (r.status !== 'approved' ? '<button onclick="updateStatus(' + r.request_id + ', \'approved\')" class="stap-btn-primary stap-btn-green" style="font-size:13px;padding:9px 20px;">✓ Approve</button>' : '') +
             (r.status !== 'rejected' ? '<button onclick="updateStatus(' + r.request_id + ', \'rejected\')" class="stap-btn-primary" style="background:var(--red);font-size:13px;padding:9px 20px;">✗ Reject</button>' : '') +
-            (r.status !== 'under_review' ? '<button onclick="updateStatus(' + r.request_id + ', \'under_review\')" class="stap-btn-primary" style="background:var(--navy-muted);font-size:13px;padding:9px 20px;">Mark Under Review</button>' : '') +
+            (r.status !== 'reviewed' ? '<button onclick="updateStatus(' + r.request_id + ', \'reviewed\')" class="stap-btn-primary" style="background:var(--navy-muted);font-size:13px;padding:9px 20px;">Mark Under Review</button>' : '') +
         '</div>';
 
         document.getElementById('modalContent').innerHTML = html;
     } catch (e) {
         console.error('viewRequest:', e);
         document.getElementById('modalContent').innerHTML = '<div class="stap-empty">Failed to load request.</div>';
+    }
+}
+
+async function updateStatus(id, status) {
+    try {
+        const res = await fetch('/admin/requests/' + id + '/status', {
+            method: 'POST',
+            headers: buildHeaders(true),
+            credentials: 'same-origin',
+            body: JSON.stringify({ status }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.message ?? 'Failed to update status.');
+            return;
+        }
+        closeModal();
+        await loadRequests();
+    } catch (e) {
+        console.error('updateStatus:', e);
+        alert('Request failed.');
     }
 }
 
