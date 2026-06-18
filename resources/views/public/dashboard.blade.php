@@ -209,7 +209,8 @@
         <h2 class="dash-section-title">Latest Captured Vehicle Counts</h2>
     </div>
     <div class="dash-los-grid">
-        @forelse ($liveVehicleData ?? [] as $data)
+        @php $vehicleItems = $liveVehicleData ?? []; @endphp
+        @forelse ($vehicleItems as $data)
             <div class="dash-los-card">
                 <span class="dash-los-number"
                       data-count="{{ $data['vehicle_count'] ?? 0 }}"
