@@ -598,6 +598,23 @@
             isNodeOnline = true;
             renderStatusPanel(data);
             document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+            // Sync top Live Vehicle Count cards directly from the hardware node data
+            if (data.vehicle_counts && data.los) {
+                const directionLabels = {
+                    NORTH: 'Mayor Gil Fernando Ave North',
+                    SOUTH: 'Mayor Gil Fernando Ave South',
+                    EAST:  'Sumulong Hwy East',
+                    WEST:  'Sumulong Hwy West',
+                };
+                const liveFromNode = ['NORTH','SOUTH','EAST','WEST'].map(lane => ({
+                    vehicle_count: data.vehicle_counts[lane] ?? 0,
+                    los:           data.los[lane] ?? 'A',
+                    location:      directionLabels[lane],
+                }));
+                renderLiveVehicleCount(liveFromNode);
+            }
+
             setVehicleCountsOnline();
         } catch (e) {
             isNodeOnline = false;
@@ -616,10 +633,11 @@
             });
             const data = await res.json();
             
-            // Only paint database updates if the hardware node isn't reporting offline override
-            renderLiveVehicleCount(data.live_vehicle_data || []);
+            // Only paint database counts when the hardware node is offline;
+            // when the node is online, fetchStatus() keeps the top cards in sync with real-time data.
             if (!isNodeOnline) {
-                _countsAreZeroed = false; 
+                renderLiveVehicleCount(data.live_vehicle_data || []);
+                _countsAreZeroed = false;
                 setVehicleCountsOffline();
             }
             
