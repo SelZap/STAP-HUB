@@ -295,7 +295,8 @@
    and lanes: NORTH / SOUTH / EAST / WEST
    ============================================================ */
 
-let nodeBaseUrl    = sessionStorage.getItem('stap_node_ip') ? `http://${sessionStorage.getItem('stap_node_ip')}:5000` : null;
+let nodeIp         = localStorage.getItem('stap_node_ip') || '';
+const useNodeProxy = window.location.protocol === 'https:';
 let nodeConnected  = false;
 let currentMode    = null;   // 'auto' | 'manual' | 'hazard' | 'emergency'
 let currentLane    = null;   // 'NORTH' | 'SOUTH' | 'EAST' | 'WEST'
@@ -320,8 +321,8 @@ function clearLog() {
 function applyNodeIp() {
     const ip = document.getElementById('nodeIpInput').value.trim();
     if (!ip) return;
-    sessionStorage.setItem('stap_node_ip', ip);
-    nodeBaseUrl = `http://${ip}:5000`;
+    localStorage.setItem('stap_node_ip', ip);
+    nodeIp = ip;
     logLine(`Node IP set to ${ip}. Connecting…`);
     wireFeeds();
     pollStatus();
@@ -329,7 +330,7 @@ function applyNodeIp() {
 
 // Restore saved IP into input on load
 (function initIp() {
-    const saved = sessionStorage.getItem('stap_node_ip');
+    const saved = localStorage.getItem('stap_node_ip');
     if (saved) document.getElementById('nodeIpInput').value = saved;
 })();
 
@@ -355,16 +356,28 @@ function updateLaneButtonsEnabled() {
 
 function capitalize(s) { return s.charAt(0) + s.slice(1).toLowerCase(); }
 
+function buildNodeUrl(path) {
+    if (!nodeIp) return null;
+
+    if (useNodeProxy) {
+        const joiner = path.includes('?') ? '&' : '?';
+        return `${window.location.origin}/admin/traffic-lights/proxy${path}${joiner}node_ip=${encodeURIComponent(nodeIp)}`;
+    }
+
+    return `http://${nodeIp}:5000${path}`;
+}
+
 async function callControl(path, body) {
-    if (!nodeBaseUrl) {
+    const url = buildNodeUrl(path);
+    if (!url) {
         logLine('No Node IP set.', true);
         return null;
     }
     try {
-        const res  = await fetch(nodeBaseUrl + path, {
+        const res  = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body || {}),
+            body: JSON.stringify({ payload: body || {} }),
         });
         const data = await res.json();
         if (!res.ok || data.success === false) {
@@ -423,9 +436,10 @@ function refreshLaneButtons() {
 
 // ── Status polling: /status endpoint ───────────────────────
 async function pollStatus() {
-    if (!nodeBaseUrl) return;
+    const url = buildNodeUrl('/status');
+    if (!url) return;
     try {
-        const res = await fetch(nodeBaseUrl + '/status', { method: 'GET' });
+        const res = await fetch(url, { method: 'GET' });
         if (!res.ok) throw new Error('Bad response');
         const data = await res.json();
 
@@ -492,25 +506,26 @@ function wireFeeds() {
         const img     = document.getElementById('feedImg' + lane);
         const offline = document.getElementById('feedOffline' + lane);
         const dot     = document.getElementById('feedDot' + lane);
+        const url     = buildNodeUrl(`/video_feed/${lane.toLowerCase()}`);
 
-        if (!nodeBaseUrl) {
+        if (!url) {
             img.style.display = 'none';
             offline.style.display = 'flex';
             dot.className = 'tlc-feed-dot offline';
             return;
         }
 
-        img.src = `${nodeBaseUrl}/video_feed/${lane.toLowerCase()}`;
+        img.src = url;
         img.onload  = () => { img.style.display = 'block'; offline.style.display = 'none'; dot.className = 'tlc-feed-dot live'; };
         img.onerror = () => { img.style.display = 'none'; offline.style.display = 'flex'; dot.className = 'tlc-feed-dot offline'; };
     });
 }
 
 // ── Boot ──────────────────────────────────────────────────
-if (nodeBaseUrl) {
+if (nodeIp) {
     wireFeeds();
     pollStatus();
 }
-pollTimer = setInterval(() => { if (nodeBaseUrl) pollStatus(); }, 2000);
+pollTimer = setInterval(() => { if (nodeIp) pollStatus(); }, 2000);
 </script>
 @endpush

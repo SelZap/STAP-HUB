@@ -64,6 +64,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
   Route::get('/traffic-lights', [TrafficLightController::class, 'index'])->name('traffic-lights');
   Route::post('/traffic-lights/{light_id}/state', [TrafficLightController::class, 'updateState'])->name('traffic-lights.state');
   Route::post('/traffic-lights/{light_id}/mode', [TrafficLightController::class, 'updateMode'])->name('traffic-lights.mode');
+  Route::get('/traffic-lights/proxy/status', [TrafficLightController::class, 'proxyStatus'])->name('traffic-lights.proxy.status');
+  Route::post('/traffic-lights/proxy/control/{endpoint}', [TrafficLightController::class, 'proxyControl'])->name('traffic-lights.proxy.control');
+  Route::get('/traffic-lights/proxy/video_feed/{lane}', [TrafficLightController::class, 'proxyFeed'])->name('traffic-lights.proxy.feed');
 
   Route::get('/alerts', [AlertController::class, 'index'])->name('alerts');
   Route::post('/alerts/{alert_id}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
