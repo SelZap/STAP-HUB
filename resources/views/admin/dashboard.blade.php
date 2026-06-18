@@ -518,16 +518,6 @@
             </div>
         </div>
 
-        {{-- Camera Connectivity --}}
-        <div class="feed-info-card">
-            <div class="feed-info-header">Camera Connectivity</div>
-            <div class="feed-info-body" id="cameraHealthPanel">
-                <div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px 0;">
-                    Loading camera health...
-                </div>
-            </div>
-        </div>
-
         <div class="feed-note">
             Streams are sourced directly from STAP Node hardware at the intersection via local network.
         </div>
