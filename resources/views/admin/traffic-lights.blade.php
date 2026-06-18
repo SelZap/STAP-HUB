@@ -215,7 +215,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Hazard
             </button>
-            <button class="tlc-btn mode-emergency" id="btnModeEmergency" onclick="triggerEmergencyPrompt()" disabled>
+            <button class="tlc-btn mode-emergency" id="btnModeEmergency" onclick="setMode('emergency')" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
                 Emergency
             </button>
@@ -297,7 +297,7 @@
 
 let nodeBaseUrl    = sessionStorage.getItem('stap_node_ip') ? `http://${sessionStorage.getItem('stap_node_ip')}:5000` : null;
 let nodeConnected  = false;
-let currentMode    = null;   // 'auto' | 'manual' | 'hazard'
+let currentMode    = null;   // 'auto' | 'manual' | 'hazard' | 'emergency'
 let currentLane    = null;   // 'NORTH' | 'SOUTH' | 'EAST' | 'WEST'
 let pollTimer      = null;
 
@@ -379,7 +379,9 @@ async function callControl(path, body) {
     }
 }
 
-// ── Mode buttons: AI / Manual / Hazard ─────────────────────
+// ── Mode buttons: AI / Manual / Hazard / Emergency ─────────
+// All four modes are simple "set system mode" calls — Hazard and
+// Emergency both flash all four lanes red, no lane needs to be picked.
 async function setMode(mode) {
     const data = await callControl('/control/mode', { mode });
     if (!data) return;
@@ -387,36 +389,8 @@ async function setMode(mode) {
     currentMode = mode;
     if (mode !== 'manual') currentLane = null;
     refreshModeButtons();
+    refreshLaneButtons();
     updateLaneButtonsEnabled();
-}
-
-// ── Emergency: ask which lane gets priority, then call /control/emergency ──
-function triggerEmergencyPrompt() {
-    const lane = prompt('Which lane needs emergency priority? (NORTH / SOUTH / EAST / WEST)', 'NORTH');
-    if (!lane) return;
-    const upper = lane.trim().toUpperCase();
-    if (!LANES.includes(upper)) {
-        logLine(`Invalid lane "${lane}".`, true);
-        return;
-    }
-    triggerEmergency(upper);
-}
-
-async function triggerEmergency(lane) {
-    const data = await callControl('/control/emergency', { lane });
-    if (!data) return;
-    logLine(`🚨 Emergency override: ${lane} given priority green.`);
-    currentMode = 'auto';
-    currentLane = lane;
-    refreshModeButtons();
-    flashEmergencyButton();
-    updateLaneButtonsEnabled();
-}
-
-function flashEmergencyButton() {
-    const btn = document.getElementById('btnModeEmergency');
-    btn.classList.add('active');
-    setTimeout(() => btn.classList.remove('active'), 3500);
 }
 
 // ── Lane D-pad: only active in Manual mode ─────────────────
@@ -436,6 +410,7 @@ function refreshModeButtons() {
     document.getElementById('btnModeAuto').classList.toggle('active', currentMode === 'auto');
     document.getElementById('btnModeManual').classList.toggle('active', currentMode === 'manual');
     document.getElementById('btnModeHazard').classList.toggle('active', currentMode === 'hazard');
+    document.getElementById('btnModeEmergency').classList.toggle('active', currentMode === 'emergency');
     document.getElementById('statMode').textContent = currentMode ? currentMode.toUpperCase() : '—';
 }
 
@@ -457,7 +432,7 @@ async function pollStatus() {
         if (!nodeConnected) logLine('Connected to STAP Node.');
         setConnBadge(true);
 
-        currentMode = data.mode; // 'auto' | 'manual'
+        currentMode = data.mode; // 'auto' | 'manual' | 'hazard' | 'emergency'
         currentLane = data.active_lane;
         refreshModeButtons();
         refreshLaneButtons();

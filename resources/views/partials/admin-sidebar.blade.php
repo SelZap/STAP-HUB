@@ -23,15 +23,6 @@
       <span class="stap-nav-label">Dashboard</span>
     </a>
 
-    <a href="{{ route('admin.traffic-logs') }}"
-      class="stap-nav-item {{ request()->routeIs('admin.traffic-logs') ? 'active' : '' }}">
-      <svg class="stap-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 3v18h18" />
-        <path d="M7 16l4-4 4 4 4-6" />
-      </svg>
-      <span class="stap-nav-label">Traffic Logs</span>
-    </a>
-
     <a href="{{ route('admin.traffic-lights') }}"
       class="stap-nav-item {{ request()->routeIs('admin.traffic-lights') ? 'active' : '' }}">
       <svg class="stap-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
